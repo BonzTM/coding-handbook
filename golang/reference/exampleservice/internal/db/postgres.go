@@ -8,23 +8,36 @@ import (
 	"math"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
+
 	"github.com/example/exampleservice/internal/config"
 	"github.com/example/exampleservice/internal/core"
 	"github.com/example/exampleservice/internal/db/sqlcgen"
 )
 
+// pgUniqueViolation is the Postgres SQLSTATE for a unique_violation (a duplicate
+// key). The storage layer maps it to core.ErrAlreadyExists; the code is matched
+// on the driver's typed *pgconn.PgError, never on the error string, so a message
+// change in the driver or database locale cannot silently break the mapping.
+const pgUniqueViolation = "23505"
+
 // Postgres is a database/sql-backed core.Store implementation. It is a
-// reference for golang/services/database.md and compiles against the standard
-// library ONLY — it imports no driver. To run it against a real database, wire
-// a driver in main with a blank import and pass its name to OpenDB:
+// reference for golang/services/database.md: it talks to the database through
+// the standard library's database/sql, with the pgx "pgx" driver registered by
+// a blank import in main (and in the integration test). It imports pgconn only
+// for the driver's typed error (*pgconn.PgError) so the unique-violation mapping
+// keys on the SQLSTATE code, not a fragile error-string match — pgconn is the
+// pure-Go wire/error package, not the database/sql driver registration itself.
+//
+// Wire the driver in main with a blank import and pass its name to OpenDB:
 //
 //	import _ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" driver
 //	...
 //	pool, err := db.OpenDB(ctx, "pgx", cfg.Database)
 //
 // The handbook starts with database/sql, hand-written SQL, and explicit pool
-// sizing; this file demonstrates exactly that without taking on a driver
-// dependency the reference module is not allowed to carry.
+// sizing; this file demonstrates exactly that while keeping the binary pure-Go
+// (the pgx stack needs no cgo).
 type Postgres struct {
 	db *sql.DB
 }
@@ -89,10 +102,11 @@ func (p *Postgres) Close() error { return p.db.Close() }
 // responsibility sqlc deliberately leaves to the storage layer.
 func (p *Postgres) queries() *sqlcgen.Queries { return sqlcgen.New(p.db) }
 
-// Create inserts a widget. The unique-violation path is mapped to
-// core.ErrAlreadyExists. Note: a production impl would inspect the driver's
-// typed error (e.g. pgconn.PgError code 23505) rather than relying on the
-// generic insert error; that mapping belongs here in the storage layer.
+// Create inserts a widget. A duplicate (tenant_id, id) primary-key collision is
+// mapped to core.ErrAlreadyExists by inspecting the driver's typed error: the
+// SQLSTATE code on *pgconn.PgError is matched against 23505 (unique_violation),
+// not the error message, so the mapping survives driver/locale message changes.
+// Any other error is wrapped and propagated as an internal failure.
 func (p *Postgres) Create(ctx context.Context, w core.Widget) error {
 	// Context is threaded through the generated method per the database doc.
 	err := p.queries().CreateWidget(ctx, sqlcgen.CreateWidgetParams{
@@ -102,6 +116,12 @@ func (p *Postgres) Create(ctx context.Context, w core.Widget) error {
 		CreatedAt: w.CreatedAt.UTC(),
 	})
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == pgUniqueViolation {
+			// Wrap with %w so callers can still errors.Is the sentinel while the
+			// driver detail (constraint name) stays available in the chain for logs.
+			return fmt.Errorf("insert widget: %w", core.ErrAlreadyExists)
+		}
 		return fmt.Errorf("insert widget: %w", err)
 	}
 	return nil

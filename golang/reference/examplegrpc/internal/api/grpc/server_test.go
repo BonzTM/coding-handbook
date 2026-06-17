@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -134,6 +135,42 @@ func TestCreateInvalidMapsToInvalidArgument(t *testing.T) {
 	_, err := h.client.CreateWidget(context.Background(), &widgetv1.CreateWidgetRequest{Id: "", Name: "x"})
 	if status.Code(err) != codes.InvalidArgument {
 		t.Fatalf("code = %v, want InvalidArgument (err=%v)", status.Code(err), err)
+	}
+}
+
+func TestCreateInvalidAttachesBadRequestDetail(t *testing.T) {
+	h := newHarness(t, syntheticAuthn())
+
+	// Empty name fails validation on the "name" field; the boundary must attach a
+	// google.rpc.BadRequest detail naming that field.
+	_, err := h.client.CreateWidget(context.Background(), &widgetv1.CreateWidgetRequest{Id: "ok", Name: ""})
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("error is not a gRPC status: %v", err)
+	}
+	if st.Code() != codes.InvalidArgument {
+		t.Fatalf("code = %v, want InvalidArgument", st.Code())
+	}
+
+	var br *errdetails.BadRequest
+	for _, d := range st.Details() {
+		if v, isBR := d.(*errdetails.BadRequest); isBR {
+			br = v
+			break
+		}
+	}
+	if br == nil {
+		t.Fatalf("no *errdetails.BadRequest detail present; details=%v", st.Details())
+	}
+	if len(br.GetFieldViolations()) != 1 {
+		t.Fatalf("field violations = %d, want 1 (%v)", len(br.GetFieldViolations()), br.GetFieldViolations())
+	}
+	fv := br.GetFieldViolations()[0]
+	if fv.GetField() != "name" {
+		t.Errorf("violation field = %q, want %q", fv.GetField(), "name")
+	}
+	if fv.GetDescription() == "" {
+		t.Error("violation description must not be empty")
 	}
 }
 

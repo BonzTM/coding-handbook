@@ -47,7 +47,38 @@ type GRPCConfig struct {
 	// ConnTimeout bounds how long a new connection may take to become ready
 	// (handshake + first settings), protecting against slow-loris connections.
 	ConnTimeout time.Duration
+	// TLS holds optional transport security. When unset the server listens
+	// insecure (local/dev only); production must configure it.
+	TLS TLSConfig
 }
+
+// TLSConfig configures transport security for the gRPC listener. It is
+// config-gated: with CertFile and KeyFile set the server presents that
+// certificate and serves over TLS; additionally setting ClientCAFile turns on
+// mutual TLS (the server requires and verifies a client certificate). Leaving
+// CertFile/KeyFile empty selects the insecure local/dev listener.
+//
+// mTLS is the default posture for internal service-to-service traffic: callers
+// present a client cert signed by ClientCAFile unless a service mesh terminates
+// TLS for us. The reference defaults to insecure so it boots offline, and logs a
+// loud warning that production requires TLS.
+type TLSConfig struct {
+	// CertFile is the PEM server certificate (chain) path. Empty disables TLS.
+	CertFile string
+	// KeyFile is the PEM private key path matching CertFile. Empty disables TLS.
+	KeyFile string
+	// ClientCAFile is the PEM CA bundle used to verify client certificates. When
+	// set (alongside CertFile/KeyFile) the server enforces mutual TLS.
+	ClientCAFile string
+}
+
+// Enabled reports whether server-side TLS is configured (a cert and key are
+// both present). The server constructs TLS credentials only when this is true.
+func (t TLSConfig) Enabled() bool { return t.CertFile != "" && t.KeyFile != "" }
+
+// MutualTLS reports whether client-certificate verification (mTLS) is enabled,
+// which requires both server TLS and a client-CA bundle.
+func (t TLSConfig) MutualTLS() bool { return t.Enabled() && t.ClientCAFile != "" }
 
 // HTTPConfig configures the metrics/probes sidecar HTTP server. gRPC has no
 // metrics endpoint, so Prometheus /metrics and the k8s probes live here.
@@ -121,6 +152,10 @@ func Load(args []string) (Config, error) {
 	handlerTimeout := fs.Duration("grpc-handler-timeout", env.duration("GRPC_HANDLER_TIMEOUT", defaultHandlerTimeout), "deadline-guard ceiling for RPCs with no client deadline")
 	connTimeout := fs.Duration("grpc-conn-timeout", env.duration("GRPC_CONN_TIMEOUT", defaultConnTimeout), "max time for a new connection to become ready")
 
+	tlsCertFile := fs.String("grpc-tls-cert-file", env.string("GRPC_TLS_CERT_FILE", ""), "PEM server certificate path (enables TLS with key; empty = insecure local/dev)")
+	tlsKeyFile := fs.String("grpc-tls-key-file", env.string("GRPC_TLS_KEY_FILE", ""), "PEM server private key path (required with cert)")
+	tlsClientCAFile := fs.String("grpc-tls-client-ca-file", env.string("GRPC_TLS_CLIENT_CA_FILE", ""), "PEM client-CA bundle path (enables mTLS client-cert verification)")
+
 	httpAddr := fs.String("http-addr", env.string("HTTP_ADDR", defaultHTTPAddr), "metrics/probes sidecar listen address")
 	readHeaderTimeout := fs.Duration("http-read-header-timeout", env.duration("HTTP_READ_HEADER_TIMEOUT", defaultReadHeaderTimeout), "sidecar HTTP read-header timeout")
 
@@ -155,6 +190,11 @@ func Load(args []string) (Config, error) {
 			MaxRecvMsgBytes: *maxRecvMsgBytes,
 			HandlerTimeout:  *handlerTimeout,
 			ConnTimeout:     *connTimeout,
+			TLS: TLSConfig{
+				CertFile:     *tlsCertFile,
+				KeyFile:      *tlsKeyFile,
+				ClientCAFile: *tlsClientCAFile,
+			},
 		},
 		HTTP: HTTPConfig{
 			Addr:              *httpAddr,
@@ -195,6 +235,16 @@ func (c Config) Validate() error {
 	}
 	if c.GRPC.ConnTimeout <= 0 {
 		return fmt.Errorf("config: GRPC_CONN_TIMEOUT must be positive, got %s", c.GRPC.ConnTimeout)
+	}
+	// TLS cert and key are required together: a half-configured pair would either
+	// fail at handshake or silently fall back to insecure, so it is fail-fast.
+	if (c.GRPC.TLS.CertFile == "") != (c.GRPC.TLS.KeyFile == "") {
+		return errors.New("config: GRPC_TLS_CERT_FILE and GRPC_TLS_KEY_FILE must be set together")
+	}
+	// A client-CA bundle only makes sense with server TLS; requiring client certs
+	// without serving TLS is a misconfiguration.
+	if c.GRPC.TLS.ClientCAFile != "" && !c.GRPC.TLS.Enabled() {
+		return errors.New("config: GRPC_TLS_CLIENT_CA_FILE (mTLS) requires GRPC_TLS_CERT_FILE and GRPC_TLS_KEY_FILE")
 	}
 	if c.HTTP.Addr == "" {
 		return errors.New("config: HTTP_ADDR must not be empty")

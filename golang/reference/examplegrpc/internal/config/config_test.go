@@ -60,3 +60,37 @@ func TestValidateSampleRatioRange(t *testing.T) {
 		t.Fatal("Load accepted out-of-range sample ratio")
 	}
 }
+
+func TestValidateTLSCertKeyRequiredTogether(t *testing.T) {
+	_, err := config.Load([]string{"-grpc-tls-cert-file", "/tmp/cert.pem"})
+	if err == nil {
+		t.Fatal("Load accepted a cert without a key")
+	}
+	if !strings.Contains(err.Error(), "GRPC_TLS_KEY_FILE") {
+		t.Errorf("error must name the missing key, got: %v", err)
+	}
+}
+
+func TestValidateClientCARequiresServerTLS(t *testing.T) {
+	_, err := config.Load([]string{"-grpc-tls-client-ca-file", "/tmp/ca.pem"})
+	if err == nil {
+		t.Fatal("Load accepted an mTLS client CA without server TLS")
+	}
+	if !strings.Contains(err.Error(), "GRPC_TLS_CLIENT_CA_FILE") {
+		t.Errorf("error must name the client-CA key, got: %v", err)
+	}
+}
+
+func TestTLSConfigPosture(t *testing.T) {
+	if (config.TLSConfig{}).Enabled() {
+		t.Error("empty TLSConfig must not be Enabled")
+	}
+	server := config.TLSConfig{CertFile: "c", KeyFile: "k"}
+	if !server.Enabled() || server.MutualTLS() {
+		t.Errorf("server TLS posture wrong: enabled=%v mtls=%v", server.Enabled(), server.MutualTLS())
+	}
+	mtls := config.TLSConfig{CertFile: "c", KeyFile: "k", ClientCAFile: "ca"}
+	if !mtls.MutualTLS() {
+		t.Error("cert+key+clientCA must be MutualTLS")
+	}
+}

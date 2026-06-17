@@ -17,6 +17,8 @@ Every PR should run a predictable baseline pipeline.
 
 Tailor the matrix to the repo, but do not quietly drop the safety stages because they are slow. The committed [CI workflow](../templates/github-workflows-ci.yml) runs `make verify`, which wraps this table; keep the Makefile and this table in sync rather than hand-editing CI.
 
+The `verify` job is the *offline* gate: it runs with no network and no database, so the table above proves the in-memory path. The workflow adds a second `integration` job that stands up a `postgres:16` service container and runs `go test -tags=integration ./...` with `TEST_DATABASE_DSN` pointing at it, so the real SQL path (and the embedded migrations) is proven in CI rather than only at deploy time. The same suite is gated behind `//go:build integration` and skips when `TEST_DATABASE_DSN` is unset, so it never runs in the offline inner loop — see [quality/testing.md](../quality/testing.md).
+
 ## Release Defaults
 
 - tag releases with canonical Go module versions in `v1.2.3` form (the `v` prefix is required by the module system and the module proxy); changelog or display strings may render them without the `v`, but the VCS tag must include it

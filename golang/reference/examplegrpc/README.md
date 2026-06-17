@@ -16,7 +16,8 @@ api/widget/v1/widget.proto   versioned wire contract (widget.v1)
 api/widget/v1/*.pb.go        committed generated stubs (buf + protoc-gen-go*)
 internal/api/grpc/           transport adapter
   server.go                  thin WidgetServiceServer over internal/core
-  errors.go                  domain error -> codes.* mapping (mapped once at the boundary)
+  errors.go                  domain error -> codes.* mapping + google.rpc.BadRequest details (mapped once at the boundary)
+  tls.go                     config-gated TLS/mTLS credential construction
   interceptors.go            chained unary stack: recovery, request-id, access log, deadline guard, auth
   service.go                 grpc.Server wiring: otelgrpc stats handler, health, reflection
   sidecar.go                 HTTP sidecar: /metrics, /livez, /readyz
@@ -44,6 +45,38 @@ grpcurl -plaintext -d '{"id":"w1","name":"One"}' localhost:9090 widget.v1.Widget
 grpcurl -plaintext -d '{"id":"w1"}' localhost:9090 widget.v1.WidgetService/GetWidget
 grpcurl -plaintext -d '{"page_size":2}' localhost:9090 widget.v1.WidgetService/ListWidgets
 ```
+
+## Errors
+
+Domain errors are mapped to `codes.*` exactly once, at the transport boundary
+(`errors.go`). A field-level validation failure (`core.ErrInvalidWidget`) maps to
+`codes.InvalidArgument` **with** a `google.rpc.BadRequest` detail that lists the
+offending `{field, description}` pairs, so clients get machine-readable, per-field
+violations rather than only a flat message. core carries the violations
+structurally (`core.FieldViolations`); the proto detail is built at the boundary
+via `status.WithDetails`. Other sentinels keep their codes (`NotFound`,
+`AlreadyExists`, `Unauthenticated`, `PermissionDenied`); an unexpected error
+becomes a generic `Internal` so internals never leak.
+
+Decode the detail on the client with `status.FromError(err)` then
+`st.Details()`, type-asserting to `*errdetails.BadRequest`.
+
+## Transport security (TLS / mTLS)
+
+TLS is **config-gated** (`tls.go`, `ServerTransportCredentials`):
+
+- `GRPC_TLS_CERT_FILE` + `GRPC_TLS_KEY_FILE` set ⇒ the server serves over TLS
+  (`grpc.Creds(credentials.NewTLS(...))`, TLS 1.2 minimum).
+- Additionally setting `GRPC_TLS_CLIENT_CA_FILE` ⇒ **mutual TLS**: the server
+  requires and verifies a client certificate against that CA bundle. mTLS is the
+  default posture for internal service-to-service traffic unless a service mesh
+  terminates TLS for you.
+- Neither set ⇒ an **insecure** plaintext listener for **local/dev only**. The
+  process logs a loud warning at startup; **production requires TLS**.
+
+A configured-but-unloadable cert/key is **fail-fast** at startup (never a silent
+downgrade to plaintext). Cert and key must be set together, and a client CA
+requires server TLS — both enforced in `config.Validate`.
 
 ## Codegen
 

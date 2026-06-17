@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/example/exampleservice/internal/core"
+	"github.com/example/exampleservice/internal/telemetry"
 )
 
 // --- Wire DTOs -------------------------------------------------------------
@@ -66,6 +67,21 @@ func (s *Server) handleCreateWidget(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, r, s.logger, err)
 		return
+	}
+
+	// Audit the successful data-mutating write. The record names the actor, the
+	// created resource by id, and the result — never the request body (the
+	// widget's name is application payload, kept out of the audit stream). The
+	// principal is present here because requireRole(RoleWriter) already passed.
+	if p, ok := core.PrincipalFrom(r.Context()); ok {
+		s.audit.Emit(r.Context(), telemetry.AuditEvent{
+			Actor:     p.Subject,
+			Tenant:    p.TenantID,
+			Action:    auditActionWidgetCreate,
+			Resource:  widget.ID,
+			Result:    telemetry.AuditSuccess,
+			RequestID: requestIDFrom(r.Context()),
+		})
 	}
 
 	s.metrics.IncWidgetCreated()

@@ -20,6 +20,8 @@ A template's filename encodes its destination in a fresh repo. Slashes in a dest
 - `project-agents.md` -> `AGENTS.md`
 - `codeowners.md` -> `.github/CODEOWNERS`
 - `github-workflows-ci.yml` -> `.github/workflows/ci.yml`
+- `k8s-deployment.yaml` -> `k8s/deployment.yaml`
+- `docker-compose.yml` keeps its literal name at the repo root.
 - dotfiles and root configs (`Makefile`, `Dockerfile`, `.golangci.yml`, `.dockerignore`) keep their literal name.
 
 Where the destination contains a name you choose (`<app>`), pick it when you copy; the template does not guess for you.
@@ -38,6 +40,8 @@ Where the destination contains a name you choose (`<app>`), pick it when you cop
 | [github-workflows-ci.yml](github-workflows-ci.yml) | `.github/workflows/ci.yml` | [operations/ci-and-release.md](../operations/ci-and-release.md) |
 | [Dockerfile](Dockerfile) | `Dockerfile` | [operations/deployment.md](../operations/deployment.md) |
 | [.dockerignore](.dockerignore) | `.dockerignore` | [operations/deployment.md](../operations/deployment.md) |
+| [docker-compose.yml](docker-compose.yml) | `docker-compose.yml` | [operations/deployment.md](../operations/deployment.md) |
+| [k8s-deployment.yaml](k8s-deployment.yaml) | `k8s/deployment.yaml` | [operations/deployment.md](../operations/deployment.md) |
 | [runbook.md](runbook.md) | `docs/runbook.md` | [operations/operability.md](../operations/operability.md) |
 | [dependabot.yml](dependabot.yml) | `.github/dependabot.yml` | [operations/ci-and-release.md](../operations/ci-and-release.md) |
 | [security-policy.md](security-policy.md) | `.github/SECURITY.md` | [operations/security.md](../operations/security.md) |

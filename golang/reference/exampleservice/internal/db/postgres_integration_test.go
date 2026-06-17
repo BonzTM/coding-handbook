@@ -81,6 +81,34 @@ func TestPostgresCreateGet(t *testing.T) {
 	}
 }
 
+// TestPostgresCreateDuplicate proves the storage layer maps a Postgres
+// unique_violation (SQLSTATE 23505) on the (tenant_id, id) primary key to
+// core.ErrAlreadyExists, keyed on the driver's typed *pgconn.PgError code rather
+// than an error-string match.
+func TestPostgresCreateDuplicate(t *testing.T) {
+	ctx := context.Background()
+	store := newLiveStore(t)
+
+	w := core.Widget{ID: "dup", TenantID: "t1", Name: "first", CreatedAt: time.Now().UTC().Truncate(time.Microsecond)}
+	if err := store.Create(ctx, w); err != nil {
+		t.Fatalf("first Create: %v", err)
+	}
+	// Same (tenant_id, id) collides on the composite primary key.
+	dup := core.Widget{ID: "dup", TenantID: "t1", Name: "second", CreatedAt: time.Now().UTC().Truncate(time.Microsecond)}
+	err := store.Create(ctx, dup)
+	if !errors.Is(err, core.ErrAlreadyExists) {
+		t.Fatalf("duplicate Create = %v, want ErrAlreadyExists", err)
+	}
+	// The original row is untouched: the failed insert did not overwrite it.
+	got, err := store.Get(ctx, "t1", "dup")
+	if err != nil {
+		t.Fatalf("Get after duplicate: %v", err)
+	}
+	if got.Name != "first" {
+		t.Errorf("Get(dup).Name = %q, want %q (duplicate must not overwrite)", got.Name, "first")
+	}
+}
+
 // TestPostgresKeysetPagination proves the SQL keyset query partitions the set in
 // (created_at, id) order across pages with no overlap or gaps, matching the
 // in-memory store's behavior.

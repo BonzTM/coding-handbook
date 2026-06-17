@@ -5,6 +5,7 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
@@ -25,6 +26,10 @@ type Deps struct {
 	// Authn verifies bearer tokens; SyntheticAuthenticator in local/dev,
 	// StaticTokenAuthenticator (or a JWKS verifier) when auth is enabled.
 	Authn Authenticator
+	// Creds is the optional transport security. When nil the server listens
+	// insecure (local/dev); main builds it from config via
+	// ServerTransportCredentials and fails fast if configured TLS cannot load.
+	Creds credentials.TransportCredentials
 }
 
 // NewGRPCServer builds the configured *grpc.Server with the interceptor chain,
@@ -44,12 +49,20 @@ func NewGRPCServer(cfg config.GRPCConfig, deps Deps) (*grpc.Server, *health.Serv
 		authUnary(deps.Authn),
 	)
 
-	srv := grpc.NewServer(
+	opts := []grpc.ServerOption{
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(chain),
 		grpc.MaxRecvMsgSize(cfg.MaxRecvMsgBytes),
 		grpc.ConnectionTimeout(cfg.ConnTimeout),
-	)
+	}
+	// Transport security is config-gated: with credentials the server serves over
+	// TLS (mTLS when a client CA is configured); without them it listens insecure
+	// for local/dev only. main logs the posture loudly at startup.
+	if deps.Creds != nil {
+		opts = append(opts, grpc.Creds(deps.Creds))
+	}
+
+	srv := grpc.NewServer(opts...)
 
 	widgetv1.RegisterWidgetServiceServer(srv, NewServer(deps.Service))
 

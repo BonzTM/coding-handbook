@@ -187,13 +187,13 @@ func (s *Service) CreateWidget(ctx context.Context, id, name string) (Widget, er
 		return Widget{}, fmt.Errorf("%w: %s requires role %s", ErrForbidden, p.Subject, RoleWriter)
 	}
 	if id == "" {
-		return Widget{}, errInvalidf("id must not be empty")
+		return Widget{}, errInvalidf("id", "id must not be empty")
 	}
 	if name == "" {
-		return Widget{}, errInvalidf("name must not be empty")
+		return Widget{}, errInvalidf("name", "name must not be empty")
 	}
 	if len(name) > maxNameLen {
-		return Widget{}, errInvalidf("name must be at most %d bytes", maxNameLen)
+		return Widget{}, errInvalidf("name", "name must be at most %d bytes", maxNameLen)
 	}
 
 	w := Widget{
@@ -223,7 +223,7 @@ func (s *Service) GetWidget(ctx context.Context, id string) (Widget, error) {
 		return Widget{}, fmt.Errorf("%w: %s requires role %s", ErrForbidden, p.Subject, RoleReader)
 	}
 	if id == "" {
-		return Widget{}, errInvalidf("id must not be empty")
+		return Widget{}, errInvalidf("id", "id must not be empty")
 	}
 	return s.store.Get(ctx, p.TenantID, id)
 }
@@ -273,13 +273,40 @@ func (s *Service) ListWidgetsPage(ctx context.Context, after Cursor, pageSize in
 	return page, nil
 }
 
-// errInvalidf builds an ErrInvalidWidget-wrapping error with a specific reason
-// so the message is actionable while errors.Is(err, ErrInvalidWidget) holds.
-func errInvalidf(format string, args ...any) error {
-	return &invalidError{reason: fmt.Sprintf(format, args...)}
+// FieldViolation names a single request field that failed validation together
+// with a human-readable reason. It is the structured, transport-agnostic carrier
+// the gRPC boundary renders as a google.rpc.BadRequest field violation; core
+// stays free of any wire/proto dependency.
+type FieldViolation struct {
+	// Field is the offending request field (e.g. "id", "name").
+	Field string
+	// Description is the actionable reason the field is invalid.
+	Description string
 }
 
-type invalidError struct{ reason string }
+// FieldViolations extracts the per-field validation violations carried by an
+// ErrInvalidWidget error, or nil if err is not a structured validation error.
+// The transport uses it to attach a google.rpc.BadRequest detail without
+// importing core's unexported error type or parsing messages.
+func FieldViolations(err error) []FieldViolation {
+	var ie *invalidError
+	if errors.As(err, &ie) && ie.field != "" {
+		return []FieldViolation{{Field: ie.field, Description: ie.reason}}
+	}
+	return nil
+}
+
+// errInvalidf builds an ErrInvalidWidget-wrapping error for the named field with
+// a specific reason so the message is actionable, the field is structured for a
+// BadRequest detail, and errors.Is(err, ErrInvalidWidget) holds.
+func errInvalidf(field, format string, args ...any) error {
+	return &invalidError{field: field, reason: fmt.Sprintf(format, args...)}
+}
+
+type invalidError struct {
+	field  string
+	reason string
+}
 
 func (e *invalidError) Error() string { return "invalid widget: " + e.reason }
 

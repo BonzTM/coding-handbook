@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -46,6 +48,41 @@ func TestStatusFromDomainMapping(t *testing.T) {
 		})
 	}
 }
+
+func TestStatusFromDomainAttachesBadRequest(t *testing.T) {
+	// Drive a real field-level validation failure through core so the error
+	// carries a structured FieldViolation, then assert the boundary renders it as
+	// a google.rpc.BadRequest detail.
+	svc := core.NewService(core.NewMemory(), fixedClock{})
+	ctx := core.WithPrincipal(context.Background(), core.Principal{
+		Subject:  "u",
+		TenantID: "t",
+		Roles:    []core.Role{core.RoleWriter},
+	})
+	_, derr := svc.CreateWidget(ctx, "id-ok", "") // empty name -> invalid "name"
+	if derr == nil {
+		t.Fatal("expected a validation error")
+	}
+
+	st, expected := statusFromDomain(derr)
+	if !expected || st.Code() != codes.InvalidArgument {
+		t.Fatalf("code=%v expected=%v, want InvalidArgument/true", st.Code(), expected)
+	}
+
+	var br *errdetails.BadRequest
+	for _, d := range st.Details() {
+		if v, ok := d.(*errdetails.BadRequest); ok {
+			br = v
+		}
+	}
+	if br == nil || len(br.GetFieldViolations()) != 1 || br.GetFieldViolations()[0].GetField() != "name" {
+		t.Fatalf("missing/incorrect BadRequest detail: %+v", st.Details())
+	}
+}
+
+type fixedClock struct{}
+
+func (fixedClock) Now() time.Time { return time.Unix(0, 0).UTC() }
 
 func TestErrorFromDomainPreservesCode(t *testing.T) {
 	err := errorFromDomain(core.ErrNotFound)

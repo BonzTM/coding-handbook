@@ -60,6 +60,15 @@ Secrets and environment-specific config reach the container at RUNTIME from the 
 - The application's shutdown grace period must **exceed** the platform's termination grace period (e.g. Kubernetes `terminationGracePeriodSeconds`), or the platform sends `SIGKILL` mid-drain. Budget: readiness flips to not-ready, the load balancer stops routing, in-flight requests finish, *then* the process exits — all inside the platform grace.
 - Pair shutdown with retry/timeout discipline at clients so a rolling deploy does not surface as user-visible errors (see [operations/resilience.md](resilience.md)).
 
+### Orchestration
+
+The probes, runtime limits, and grace-period budget above are not just prose — they are committed, copyable manifests under [`golang/templates/`](../templates/README.md):
+
+- [`docker-compose.yml`](../templates/docker-compose.yml) — the local stack: the service plus a `postgres:16-alpine` with a healthcheck and `depends_on: service_healthy`, wiring `DB_DSN` and the config keys so the SQL path runs the same way CI's integration job does ([ci-and-release.md](ci-and-release.md)).
+- [`k8s-deployment.yaml`](../templates/k8s-deployment.yaml) — the production rollout: a nonroot Deployment with resource requests/limits, `GOMEMLIMIT`/`GOMAXPROCS` derived from those limits, `/livez` liveness + `/readyz` readiness probes, `terminationGracePeriodSeconds` above the app shutdown grace, a `DB_DSN` secret, a Service, and an HPA.
+
+Copy them and adjust the image, namespace, secret name, and resource numbers; this doc is the contract they implement, so do not restate it in the manifests.
+
 ## Common Mistakes And Forbidden Patterns
 
 - Running as root, or `USER root` left in the final stage.

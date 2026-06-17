@@ -41,6 +41,10 @@ type Server struct {
 	idempotency core.IdempotencyStore
 	// clock stamps idempotency TTLs; injectable for deterministic tests.
 	clock clock
+	// audit emits security-relevant audit events (authn failure, authz denial,
+	// data-mutating write) to a dedicated sink, separate from the access log.
+	// Required; wire telemetry.NopAuditLogger to discard.
+	audit *telemetry.AuditLogger
 }
 
 // Deps bundles the identity and idempotency dependencies the server wires on top
@@ -54,6 +58,9 @@ type Deps struct {
 	Idempotency core.IdempotencyStore
 	// Clock stamps idempotency TTLs. Required (production wires the real clock).
 	Clock clock
+	// Audit is the dedicated audit-event sink for security-relevant actions. When
+	// nil the server wires telemetry.NopAuditLogger so audit calls are safe no-ops.
+	Audit *telemetry.AuditLogger
 }
 
 // metricsExposer is the optional seam a Metrics implementation can satisfy to
@@ -68,6 +75,10 @@ type metricsExposer interface {
 // chain. The readiness flag is shared with the shutdown sequence so it can flip
 // the server to unready before draining.
 func New(cfg config.HTTPConfig, svc service, logger *slog.Logger, metrics telemetry.Metrics, readiness *telemetry.Readiness, deps Deps) *Server {
+	audit := deps.Audit
+	if audit == nil {
+		audit = telemetry.NopAuditLogger()
+	}
 	s := &Server{
 		svc:          svc,
 		logger:       logger,
@@ -77,6 +88,7 @@ func New(cfg config.HTTPConfig, svc service, logger *slog.Logger, metrics teleme
 		verifier:     deps.Verifier,
 		idempotency:  deps.Idempotency,
 		clock:        deps.Clock,
+		audit:        audit,
 	}
 	// If the metrics impl publishes a scrape endpoint (the Prometheus adapter
 	// does), mount it on the probe-side mux so it is neither access-logged nor
@@ -126,9 +138,9 @@ func (s *Server) routes() http.Handler {
 	// cross-tenant read is a 404 — authorization is at the boundary, not in a
 	// helper.
 	createHandler := idempotencyMiddleware(s.idempotency, s.clock, s.logger)(http.HandlerFunc(s.handleCreateWidget))
-	apiMux.HandleFunc("POST /widgets", requireRole(core.RoleWriter, s.logger, createHandler.ServeHTTP))
-	apiMux.HandleFunc("GET /widgets", requireRole(core.RoleReader, s.logger, s.handleListWidgets))
-	apiMux.HandleFunc("GET /widgets/{id}", requireRole(core.RoleReader, s.logger, s.handleGetWidget))
+	apiMux.HandleFunc("POST /widgets", requireRole(core.RoleWriter, s.logger, s.audit, createHandler.ServeHTTP))
+	apiMux.HandleFunc("GET /widgets", requireRole(core.RoleReader, s.logger, s.audit, s.handleListWidgets))
+	apiMux.HandleFunc("GET /widgets/{id}", requireRole(core.RoleReader, s.logger, s.audit, s.handleGetWidget))
 	var apiHandler http.Handler = apiMux
 	// Cross-cutting chain, innermost first: logging+metrics wrap the routed
 	// handlers (so the matched route pattern and authz/idempotency outcome are in
@@ -137,7 +149,7 @@ func (s *Server) routes() http.Handler {
 	// Order of execution: otelhttp -> auth -> logging/metrics -> authz ->
 	// idempotency -> handler.
 	apiHandler = loggingMiddleware(s.logger, s.metrics)(apiHandler)
-	apiHandler = authMiddleware(s.verifier, s.logger)(apiHandler)
+	apiHandler = authMiddleware(s.verifier, s.logger, s.audit)(apiHandler)
 	apiHandler = otelhttp.NewHandler(apiHandler, "http.server")
 
 	// Probe mux: liveness vs readiness are distinct endpoints, NOT access-logged,
