@@ -65,7 +65,7 @@ Cross-cutting concerns apply across shapes: [services/caching.md](services/cachi
 - `foundations/` - package layout, contracts, idioms, config, errors, concurrency, time, data modeling, serialization, [shared constructs](foundations/shared-constructs.md), and [git-workflow.md](foundations/git-workflow.md) (commits, branches, changelog)
 - `quality/` - test strategy, linting, fuzzing, benchmarks, race detection, and proof commands
 - `services/` - transport, eventing, persistence, and [caching.md](services/caching.md) guidance for HTTP, gRPC, messaging, database, and cache work
-- `operations/` - telemetry, security, resilience, deployment, operability/SLOs, CI, releases, and runtime expectations
+- `operations/` - telemetry, security, audit logging, resilience, deployment, operability/SLOs, data handling/PII, CI, releases, and runtime expectations
 - `decisions/` ([README.md](decisions/README.md)) - architecture decision records (ADRs) plus dependency and framework selection rules
 - `checklists/` ([README.md](checklists/README.md)) and `recipes/` ([README.md](recipes/README.md)) - executable startup, review, release, handoff, and implementation guidance
 - `templates/` - committed copy-paste scaffolding (Makefile, `.golangci.yml`, `main.go`, project README/AGENTS/CODEOWNERS, ADR template)

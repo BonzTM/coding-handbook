@@ -6,6 +6,7 @@ For routing a change to its related obligations, see [../maintainer-map.md](../m
 
 ## Lifecycle
 
+- [spec-intake.md](spec-intake.md) - pre-flight checklist answering the WHAT decisions the handbook defers (shape, auth, tenancy, data, integration, runtime, SLOs) before any code is written, so a clear spec yields a one-shot.
 - [new-project.md](new-project.md) - bootstrapping a fresh repo from the templates and reference service to a `make verify`-green start.
 - [pr-review.md](pr-review.md) - reviewing or self-reviewing a change before merge.
 - [release.md](release.md) - cutting a release with a canonical tag, changelog, and verified artifacts.

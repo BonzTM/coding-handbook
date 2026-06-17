@@ -114,6 +114,44 @@ func decodeJSON[T any](w http.ResponseWriter, r *http.Request) (T, error) {
 - Choose an unknown-field policy and apply it consistently. For strict internal or versioned APIs, call `DisallowUnknownFields()` so typos and stale clients fail loudly. For public APIs where additive evolution must not break old senders, **ignore** unknown fields (the default) — this is what lets a new optional field ship without coordinating every caller, per [contracts-and-compatibility.md](contracts-and-compatibility.md). Document which mode each surface uses.
 - Decoding never validates business rules. After a successful decode, run validation (required fields present, ranges, enum membership) and reject with a structured error response. See [../services/http-services.md](../services/http-services.md) for the error model.
 
+### Error Responses
+
+A failure is a wire shape too. Every endpoint returns the **same** structured error envelope; a bare `{"error":"..."}` string is not a contract — it gives the client one human sentence and nothing to branch on. The default shape is a stable top-level object:
+
+```go
+// ErrorResponse is the single error envelope returned by every endpoint.
+type ErrorResponse struct {
+	Code      string       `json:"code"`                // machine-readable enum, not the HTTP status
+	Message   string       `json:"message"`             // human-readable, safe to surface
+	Fields    []FieldError `json:"fields,omitzero"`     // per-field validation failures
+	RequestID string       `json:"request_id,omitzero"` // correlation id; see errors-and-logging.md
+}
+
+// FieldError carries one validation failure against one input field.
+type FieldError struct {
+	Field   string `json:"field"`   // dotted path into the request: "items.0.qty"
+	Code    string `json:"code"`    // machine-readable enum: "required", "out_of_range"
+	Message string `json:"message"` // human-readable detail
+}
+```
+
+```json
+{
+  "code": "validation_failed",
+  "message": "the request has invalid fields",
+  "fields": [
+    { "field": "items.0.qty", "code": "out_of_range", "message": "must be >= 1" }
+  ],
+  "request_id": "01HZ..."
+}
+```
+
+- The `code` is a **string enum that the client may branch on** — `"validation_failed"`, `"order_not_found"`, `"rate_limited"` — and it is **not** the HTTP status. The status is the coarse channel (`4xx` vs `5xx`); the `code` is the precise one. Two `404`s with different `code`s are different failures; a client that switches on the status alone cannot tell them apart, so never make the status the only error signal.
+- The `code` set is a documented part of the wire contract and evolves under the same rules as any other field — add codes additively, never repurpose or silently drop one — per [contracts-and-compatibility.md](contracts-and-compatibility.md). A new `code` is a new optional behavior; removing or re-meaning one is a breaking change.
+- Validation failures populate `fields`, one `FieldError` per offending input, so a client can attach messages to form fields without parsing prose. The `field` is a dotted path into the request body; the per-field `code` is its own small enum.
+- **5xx is opaque.** Never put internal error text, a wrapped chain, or a stack trace in `message`. Server faults return a generic message (`"internal error"`) plus the `request_id`; the detail goes to the logs keyed by that id (see [errors-and-logging.md](errors-and-logging.md)), where an operator can find it. The client gets a correlation handle, not your internals.
+- The mapping from a domain error to `(status, code)` happens once, at the boundary. The handler does not hand-build envelopes inline; it calls one helper that classifies the error — using `errors.Is`/`errors.As` against the sentinel and category types from [errors-and-logging.md](errors-and-logging.md) — and writes the envelope. See [../services/http-services.md](../services/http-services.md) for where that helper sits in the handler and middleware order. A 5xx maps to a generic code and drops detail; a known domain error maps to its documented `(status, code)`.
+
 ### Codec Choice: encoding/json (v1) Is The Default
 
 Use the standard library `encoding/json`. It is the mandate.
@@ -130,6 +168,10 @@ A second implementation, `encoding/json/v2`, exists but is experimental. Per its
 - Putting `MarshalJSON`/`UnmarshalJSON` on a domain type, or serializing `internal/core` structs directly on the wire.
 - Decoding an unbounded request body, or leaving the unknown-field policy unstated and inconsistent.
 - Building on `encoding/json/v2` behind `GOEXPERIMENT=jsonv2` as if it were stable.
+- Returning a bare `{"error":"..."}` string (or a raw `http.Error` line) instead of the structured envelope; the client gets prose and nothing to branch on.
+- Leaking internal error text, a wrapped `%w` chain, or a stack trace into a 5xx `message`; the body must be opaque, with detail in the logs under the `request_id`.
+- Inventing a per-endpoint, ad-hoc error shape; every endpoint returns the one `ErrorResponse` envelope.
+- Treating the HTTP status as the only error signal — omitting the machine-readable `code`, so two distinct `404`s are indistinguishable to the client.
 
 ## Verification And Proof
 
@@ -144,6 +186,9 @@ The serialization boundary is done when:
 - precision tests cover large `int64` IDs (> 2^53) surviving a marshal/unmarshal round trip, and prove money values use integer minor units or a decimal type — never `float64`.
 - absent-vs-null-vs-value behavior is asserted for every tri-state field (pointer present, `null`, and omitted all decode distinctly).
 - a body-size cap is enforced and tested (oversized body is rejected, not OOM'd).
+- a **golden test pins the error envelope** — exact keys, the `code` value, and the `fields` shape — so a thinning or rename of the error contract shows up as a diff, the same way response goldens do.
+- a validation-failure test asserts the response carries field-level `fields` entries (correct `field` path and per-field `code`), not just a top-level message.
+- a 5xx test asserts the body carries **no internal detail** — generic `code`/`message`, a `request_id` present, and none of the wrapped error text — while the detail is confirmed in the log line for that id.
 
 ## Where To Go Next
 

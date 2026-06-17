@@ -20,6 +20,8 @@ Before adding a dependency, answer all of these:
 | Concern | Default | Acceptable escalation | Avoid by default |
 |---|---|---|---|
 | HTTP routing | `net/http` with `ServeMux` | `chi` for more complex routing/middleware shape | framework-first stacks that hide stdlib handlers |
+| gRPC / RPC framework | `google.golang.org/grpc` (grpc-go) with `buf` for codegen | `connectrpc.com/connect` (connect-go) for HTTP/1.1 + gRPC + gRPC-Web browser-friendly endpoints | hand-rolled RPC, or gateway/proxy sprawl before it is needed |
+| request validation | explicit validation in the handler/core after decode (see [../foundations/serialization.md](../foundations/serialization.md), [../foundations/data-modeling.md](../foundations/data-modeling.md)) — no library | `github.com/go-playground/validator/v10` for large struct-tag-driven validation | reflection-heavy validation frameworks as the day-one default |
 | CLI | stdlib `flag` | `cobra` for real subcommand trees and shell completion | `viper`-driven global config magic |
 | config loading | explicit env plus flags in `internal/config` | a small parsing helper if it stays explicit | global config frameworks with implicit precedence |
 | logging | `log/slog` | thin adapters only when the sink requires them | bespoke logging frameworks |
@@ -45,6 +47,7 @@ Before adding a dependency, answer all of these:
 - No messaging library adopted before the repo documents idempotency, ordering, retry, and DLQ expectations.
 - No dependency added without the approval questions answered in writing and the `go.mod`/`go.sum` diff understood line by line.
 - No adopting a cgo-only library when a pure-Go one exists (e.g. `modernc.org/sqlite` over `mattn/go-sqlite3`); cgo forfeits `CGO_ENABLED=0` static builds and needs an ADR.
+- No returning a bare `{"error":"..."}` string for validation failures; emit a structured field-error envelope so clients can map errors to fields (see [../foundations/serialization.md](../foundations/serialization.md) ### Error Responses).
 - No exception to a default in this doc without an ADR recorded.
 
 ## Verification And Proof

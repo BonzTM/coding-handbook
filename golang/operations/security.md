@@ -25,6 +25,16 @@ Define both PROVENANCE (where the material comes from) and ROTATION (how new mat
 - Rotation: if rotation matters for a secret, the process must not pin it for its whole lifetime. Make new material reachable either by re-reading the mounted file / env on a signal (e.g. `SIGHUP`) or by a rolling restart that re-runs the startup load. Decide the mechanism per secret and document it in the [runbook](../templates/runbook.md); rolling restart is the default unless re-read on signal is required. See [operations/deployment.md](deployment.md) for how injection and rolling restarts are wired.
 - Never log, echo into exec output, or include secret values in panic dumps, debug endpoints, or error messages. Wrap or redact before anything reaches a sink.
 
+### Audit Logging
+
+Audit logs answer "who did what, to what, when, and with what result" for security- and compliance-relevant actions. They are distinct from operational/access logs (see [operations/observability.md](observability.md)): access logs serve debugging and traffic analysis and are sampled, rotated, and discarded freely; audit logs are evidence and are governed accordingly.
+
+- Emit an audit event for security-relevant actions: authentication success and failure, authorization denials, privileged or data-mutating actions, and changes to configuration, secrets, or permissions. Do not audit ordinary reads at the same volume as writes — high-volume read auditing drowns the signal; audit reads only where compliance demands it (e.g. access to a regulated record).
+- Use a structured schema with the full WHO / WHAT / WHEN / WHERE on every record: WHO is the principal plus tenant/org; WHAT is the action, the target resource, and the result (allowed/denied, success/failure); WHEN is a UTC timestamp (see [foundations/time.md](../foundations/time.md)); WHERE is the request id and source (caller IP / service identity). A denial or failure is as important to record as a success.
+- Keep audit logs on their OWN stream and sink, separate from operational logs, so they can carry their own retention, access controls, and integrity guarantees. Where compliance requires it, the sink is append-only and tamper-evident (e.g. write-once storage or a hash/sequence chain); define a retention period aligned to the governing regime rather than the default operational log retention.
+- Never put secrets or PII payloads in audit records. Audit the fact and identity of the action (resource id, principal, result), not the sensitive contents — redact or reference by id. See [operations/data-handling.md](data-handling.md) for what counts as sensitive and how to redact it.
+- Use `log/slog` with a DEDICATED logger/handler routed to the audit sink (not the shared application logger), or the audit backend the org mandates. Route the specific backend (SIEM, managed audit service, append-only store) to [decisions/framework-selection.md](../decisions/framework-selection.md).
+
 ### Supply-Chain Rules
 
 - run `govulncheck ./...`
@@ -60,6 +70,10 @@ Decide HOW a vulnerability reaches you before one does, so a reporter never has 
 - `unsafe` usage without a documented, measured justification and review
 - publicly disclosing an unpatched vulnerability (issue, PR, commit message, or release note) before a fix ships
 - no private report path, so a reporter's only option is a public issue that exposes the flaw
+- conflating audit logs with access/operational logs — routing them to the same stream, where audit evidence inherits short operational retention and loose access controls
+- auditing reads at the same volume as writes, drowning the security signal in routine-access noise
+- secret values or PII payloads written into audit records instead of redacted or referenced by resource id
+- recording only successful actions, so authorization denials and authn failures leave no audit trail
 
 ## Verification And Proof
 
@@ -72,3 +86,6 @@ Decide HOW a vulnerability reaches you before one does, so a reporter never has 
 - dependency review for every newly introduced non-trivial package
 - `SECURITY.md` present for externally-facing services and published libraries, naming a private report path (no public issue) and an acknowledgement/triage SLA
 - disclosure path known and tested: a reporter (or internal tester) can reach the private channel and gets the documented acknowledgement
+- each security-relevant action (authn success/failure, authz denial, privileged or data-mutating change) emits an audit event carrying the full who / what / when / result
+- audit logs land on a separate sink from operational logs, with a defined retention period and access controls aligned to the governing compliance regime
+- audit records contain no secret or PII payloads — spot-check a denial and a privileged-write event to confirm sensitive data is redacted or referenced by id

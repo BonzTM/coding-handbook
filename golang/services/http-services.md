@@ -40,6 +40,10 @@ Each handler should usually do five things in order:
 
 If the HTTP surface is consumed outside one codebase, define and review the payload contract explicitly. That can be a stable JSON schema, OpenAPI description, or a well-documented response model in the transport package, but it should have one source of truth.
 
+### Error Responses
+
+Map each domain error to a `(status, code)` at the boundary (the `errors.go` helper) and encode it with the single structured error envelope the repo uses — a machine-readable `code`, a human `message`, and an optional `fields` array for validation failures. The envelope shape and rules are defined once in [foundations/serialization.md](../foundations/serialization.md#error-responses); the domain-error-to-status mapping lives in [foundations/errors-and-logging.md](../foundations/errors-and-logging.md). Never return a bare `{"error":"..."}` string, and never leak internal detail in a 5xx body.
+
 ### Server Hardening Defaults
 
 - set `ReadHeaderTimeout`

@@ -9,6 +9,7 @@ For routing a change to its recipe and related obligations, start at [../maintai
 - [add-http-endpoint.md](add-http-endpoint.md) - add or change one HTTP route, with DTOs, error mapping, and route wiring. Governed by [../services/http-services.md](../services/http-services.md).
 - [add-http-middleware.md](add-http-middleware.md) - add a cross-cutting HTTP middleware without leaking transport concerns into core. Governed by [../services/http-services.md](../services/http-services.md).
 - [add-grpc-method.md](add-grpc-method.md) - add a gRPC method or proto change, with generation, interceptors, and error mapping. Governed by [../services/grpc-services.md](../services/grpc-services.md).
+- [add-idempotent-write.md](add-idempotent-write.md) - make a non-GET endpoint safe to retry via an `Idempotency-Key` header, with a key store, atomic commit, and byte-identical replay. Governed by [../services/http-services.md](../services/http-services.md) and [../services/database.md](../services/database.md).
 
 ## Data And Migrations
 
