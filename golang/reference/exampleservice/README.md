@@ -176,14 +176,28 @@ unsafe writes. All libraries are pure-Go (`github.com/golang-jwt/jwt/v5`,
   cannot observe another's rows. Cross-tenant isolation is proven by unit tests
   (and a live integration test).
 - **Idempotency-Key** (`recipes/add-idempotent-write.md`): `POST /widgets`
-  honors an `Idempotency-Key` header scoped to **(tenant, route, key)**. The
-  first use processes the write and persists the response (status + body); a
-  duplicate completed key **replays** that response byte-identically without
-  re-running the side effect; an in-flight duplicate is **409**; the same key
-  with a different request body is **422**; records are **TTL-bounded**
-  (`IDEMPOTENCY_TTL`). The in-memory store backs offline tests; the SQL store
-  (behind the integration tag) persists the response in the same database as the
-  write for atomicity.
+  **requires** an `Idempotency-Key` header scoped to **(tenant, route, key)**; a
+  missing key is rejected with **400** (the recipe's recommended stance for
+  resource creation). The first use processes the write and persists the response
+  (status + body); a duplicate completed key **replays** that response
+  byte-identically without re-running the side effect; an in-flight duplicate is
+  **409**; the same key with a different request body is **422**; records are
+  **TTL-bounded** (`IDEMPOTENCY_TTL`). All four rejection bodies use the
+  structured error envelope with a machine-readable `code`.
+
+  **Durability model (honest):** the shipped reference does
+  **capture-and-replay**, not single-transaction atomicity. The middleware lets
+  the handler commit the domain write, then calls the store to persist the
+  captured response **after** the write has committed — both the in-memory store
+  and the SQL store's `Complete` are a separate write, not part of the write's
+  transaction. So a crash between the committed write and the persisted record
+  re-executes on retry. The **production-grade** pattern that makes the response
+  and the write commit atomically is a single `*sql.Tx` that claims the key,
+  performs the write, and completes the record before `COMMIT` (the SQL path
+  *should* adopt this; `sqlcgen.Queries.WithTx` exists for it). The in-memory
+  store has no transaction and is documented as not single-transaction. See
+  `recipes/add-idempotent-write.md` (Steps 4 and the Atomic-commit invariant) and
+  `internal/db/idempotency_postgres.go`.
 
 ## Notes on deliberate stdlib-only choices
 

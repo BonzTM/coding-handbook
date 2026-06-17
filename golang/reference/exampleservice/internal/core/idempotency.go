@@ -19,6 +19,11 @@ var (
 	// Idempotency-Key but with a different request fingerprint (body/route). The
 	// transport maps it to 422 Unprocessable Entity: the key is being misused.
 	ErrIdempotencyKeyMismatch = errors.New("idempotency key reused with a different request")
+	// ErrMissingIdempotencyKey is returned when an unsafe write that REQUIRES an
+	// Idempotency-Key header is sent without one. The transport maps it to 400
+	// Bad Request, per recipes/add-idempotent-write.md (require the key on
+	// create; reject a missing key).
+	ErrMissingIdempotencyKey = errors.New("idempotency key required")
 )
 
 // IdempotencyKey identifies a stored idempotent operation. It is scoped to the

@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http"
@@ -137,23 +138,38 @@ func TestIdempotencyInFlightIs409(t *testing.T) {
 	}
 }
 
-// TestIdempotencyNoKeyPassThrough proves idempotency is opt-in: without the
-// header the request runs normally and a second identical request hits the
-// natural conflict path (409 from the store), not the idempotency replay.
-func TestIdempotencyNoKeyPassThrough(t *testing.T) {
+// TestIdempotencyMissingKeyIs400 proves the create route REQUIRES an
+// Idempotency-Key: a POST without the header is rejected with 400 before the
+// handler runs (no side effect), per recipes/add-idempotent-write.md. The
+// rejection uses the structured envelope with a machine-readable code and the
+// request_id in the body, not a bare string.
+func TestIdempotencyMissingKeyIs400(t *testing.T) {
 	srv := newTestServer(t, true)
 	h := srv.Handler()
 
-	post := func() int {
-		req := httptest.NewRequest(http.MethodPost, "/widgets", strings.NewReader(`{"id":"w1","name":"n"}`))
-		rec := httptest.NewRecorder()
-		h.ServeHTTP(rec, req)
-		return rec.Code
+	req := httptest.NewRequest(http.MethodPost, "/widgets", strings.NewReader(`{"id":"w1","name":"n"}`))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("missing-key POST = %d, want 400; body=%s", rec.Code, rec.Body.String())
 	}
-	if code := post(); code != http.StatusCreated {
-		t.Fatalf("first POST = %d, want 201", code)
+
+	var errResp ErrorResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &errResp); err != nil {
+		t.Fatalf("decode error response: %v", err)
 	}
-	if code := post(); code != http.StatusConflict {
-		t.Fatalf("second POST without key = %d, want 409 (natural conflict, no replay)", code)
+	if errResp.Code != codeInvalidArgument {
+		t.Errorf("code = %q, want %q", errResp.Code, codeInvalidArgument)
+	}
+	if errResp.RequestID == "" {
+		t.Error("request_id missing from error body")
+	}
+
+	// No widget was created: the missing-key request never reached the handler.
+	list := httptest.NewRequest(http.MethodGet, "/widgets", nil)
+	lrec := httptest.NewRecorder()
+	h.ServeHTTP(lrec, list)
+	if strings.Contains(lrec.Body.String(), `"id":"w1"`) {
+		t.Errorf("widget was created despite missing key; body=%s", lrec.Body.String())
 	}
 }

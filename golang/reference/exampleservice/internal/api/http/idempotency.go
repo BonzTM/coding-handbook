@@ -27,7 +27,8 @@ type clock interface {
 // writes. It keys on (tenant, route, header value), fingerprints the request
 // body, and:
 //
-//   - absent the header, passes through unchanged (idempotency is opt-in);
+//   - REQUIRES the header on the routes it guards (creation): a missing key is a
+//     400, per the recipe's recommended stance for resource creation;
 //   - on first use, processes the request while buffering the response, then
 //     persists status+body via the store so a retry replays it;
 //   - on a duplicate completed key with the SAME body, replays the stored
@@ -38,17 +39,27 @@ type clock interface {
 //   - bounded by the store's TTL.
 //
 // It runs AFTER auth/authz (it needs the principal's tenant) and just before the
-// handler, so only authorized writes consume a key. The store write and the
-// domain side effect are not in one SQL transaction in the in-memory build; the
-// SQL store (behind the integration tag) persists the response in the same
-// transaction as the write for true atomicity, per the recipe.
+// handler, so only authorized writes consume a key.
+//
+// Durability model (honest): this is CAPTURE-AND-REPLAY, not a single
+// transaction. The domain write commits inside the handler; THEN this middleware
+// calls store.Complete to persist the captured status+body. So the write and the
+// idempotency record do NOT commit atomically — a crash after the write but
+// before Complete strands a committed write with no record, and the next retry
+// re-executes. The in-memory store cannot do better (it has no transaction). The
+// production-grade fix is the single-transaction claim-write-complete seam the
+// SQL path SHOULD adopt (claim the key, perform the write, and persist the
+// response in ONE *sql.Tx); see recipes/add-idempotent-write.md and the README.
+// The reference ships the capture-and-replay form and documents that gap rather
+// than claiming an atomicity it does not have.
 func idempotencyMiddleware(store core.IdempotencyStore, clk clock, logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			key := r.Header.Get(idempotencyHeader)
 			if key == "" {
-				// Opt-in: no key means no idempotency tracking.
-				next.ServeHTTP(w, r)
+				// Required on the guarded (creation) route: a missing key is a client
+				// bug, rejected with 400 before the handler runs, per the recipe.
+				writeError(w, r, logger, core.ErrMissingIdempotencyKey)
 				return
 			}
 

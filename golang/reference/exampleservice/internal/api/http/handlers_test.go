@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -22,6 +23,21 @@ import (
 type fixedClock struct{ t time.Time }
 
 func (c fixedClock) Now() time.Time { return c.t }
+
+// idemKeySeq generates a fresh Idempotency-Key per call so a test POST that does
+// not care about idempotency behaves like a one-shot write (a unique key never
+// collides, so it neither replays nor 422s). POST /widgets now REQUIRES the
+// header; tests that exercise replay/conflict set their own fixed key instead.
+var idemKeySeq atomic.Int64
+
+// newCreateRequest builds a POST /widgets request with a unique Idempotency-Key
+// so the create route's required-key policy is satisfied without entangling
+// unrelated tests in idempotency semantics.
+func newCreateRequest(body string) *http.Request {
+	req := httptest.NewRequest(http.MethodPost, "/widgets", strings.NewReader(body))
+	req.Header.Set(idempotencyHeader, fmt.Sprintf("test-key-%d", idemKeySeq.Add(1)))
+	return req
+}
 
 // newTestServer wires a Server against the real in-memory store and core
 // service, with a discard logger and a readiness flag the caller controls. Auth
@@ -68,8 +84,7 @@ func TestCreateAndGetWidget(t *testing.T) {
 	h := srv.Handler()
 
 	// Create.
-	body := strings.NewReader(`{"id":"w1","name":"Widget One"}`)
-	req := httptest.NewRequest(http.MethodPost, "/widgets", body)
+	req := newCreateRequest(`{"id":"w1","name":"Widget One"}`)
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 
@@ -93,25 +108,41 @@ func TestCreateAndGetWidget(t *testing.T) {
 	}
 }
 
+// TestCreateWidgetValidationError proves a validation failure returns the
+// structured envelope (NOT a bare {"error":...} string): a machine-readable
+// top-level code of "validation_failed", a per-field entry in fields with the
+// offending field path and its own code, and a correlation request_id in the
+// body, per golang/foundations/serialization.md ### Error Responses.
 func TestCreateWidgetValidationError(t *testing.T) {
 	srv := newTestServer(t, true)
 	h := srv.Handler()
 
 	// Missing name -> 400 from core validation, mapped at the boundary.
-	body := strings.NewReader(`{"id":"w1"}`)
-	req := httptest.NewRequest(http.MethodPost, "/widgets", body)
+	req := newCreateRequest(`{"id":"w1"}`)
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400; body=%s", rec.Code, rec.Body.String())
 	}
-	var errResp errorResponse
+	var errResp ErrorResponse
 	if err := json.Unmarshal(rec.Body.Bytes(), &errResp); err != nil {
 		t.Fatalf("decode error response: %v", err)
 	}
-	if errResp.Error == "" {
-		t.Error("error response body is empty")
+	if errResp.Code != codeValidationFailed {
+		t.Errorf("code = %q, want %q", errResp.Code, codeValidationFailed)
+	}
+	if errResp.Message == "" {
+		t.Error("error response message is empty")
+	}
+	if len(errResp.Fields) != 1 {
+		t.Fatalf("fields = %+v, want exactly one field error", errResp.Fields)
+	}
+	if errResp.Fields[0].Field != "name" || errResp.Fields[0].Code != core.CodeRequired {
+		t.Errorf("field error = %+v, want field=name code=%s", errResp.Fields[0], core.CodeRequired)
+	}
+	if errResp.RequestID == "" {
+		t.Error("request_id missing from error body; it must be echoed in the envelope")
 	}
 }
 
@@ -120,8 +151,7 @@ func TestCreateWidgetUnknownField(t *testing.T) {
 	h := srv.Handler()
 
 	// Strict surface: an unknown field is rejected with 400.
-	body := strings.NewReader(`{"id":"w1","name":"n","extra":true}`)
-	req := httptest.NewRequest(http.MethodPost, "/widgets", body)
+	req := newCreateRequest(`{"id":"w1","name":"n","extra":true}`)
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 
@@ -147,10 +177,12 @@ func TestCreateWidgetConflict(t *testing.T) {
 	srv := newTestServer(t, true)
 	h := srv.Handler()
 
+	// Each create uses a FRESH idempotency key (newCreateRequest), so the second
+	// identical-body POST is NOT an idempotent replay; it reaches the store and
+	// hits the natural duplicate-id conflict (409 already_exists).
 	create := func() *httptest.ResponseRecorder {
-		req := httptest.NewRequest(http.MethodPost, "/widgets", strings.NewReader(`{"id":"dup","name":"n"}`))
 		rec := httptest.NewRecorder()
-		h.ServeHTTP(rec, req)
+		h.ServeHTTP(rec, newCreateRequest(`{"id":"dup","name":"n"}`))
 		return rec
 	}
 	if rec := create(); rec.Code != http.StatusCreated {
@@ -172,10 +204,8 @@ func TestListWidgetsPaginationWalk(t *testing.T) {
 
 	ids := []string{"w5", "w1", "w3", "w2", "w4"}
 	for _, id := range ids {
-		body := strings.NewReader(`{"id":"` + id + `","name":"n"}`)
-		req := httptest.NewRequest(http.MethodPost, "/widgets", body)
 		rec := httptest.NewRecorder()
-		h.ServeHTTP(rec, req)
+		h.ServeHTTP(rec, newCreateRequest(`{"id":"`+id+`","name":"n"}`))
 		if rec.Code != http.StatusCreated {
 			t.Fatalf("seed %s status = %d, want 201", id, rec.Code)
 		}
@@ -231,10 +261,8 @@ func TestListWidgetsPageSizeClamp(t *testing.T) {
 	total := core.MaxPageSize + 10
 	for i := range total {
 		id := fmt.Sprintf("w%04d", i)
-		body := strings.NewReader(`{"id":"` + id + `","name":"n"}`)
-		req := httptest.NewRequest(http.MethodPost, "/widgets", body)
 		rec := httptest.NewRecorder()
-		h.ServeHTTP(rec, req)
+		h.ServeHTTP(rec, newCreateRequest(`{"id":"`+id+`","name":"n"}`))
 		if rec.Code != http.StatusCreated {
 			t.Fatalf("seed %s status = %d, want 201", id, rec.Code)
 		}
@@ -292,10 +320,8 @@ func TestListWidgetsLastPageEmptyCursor(t *testing.T) {
 	h := srv.Handler()
 
 	for _, id := range []string{"a", "b"} {
-		body := strings.NewReader(`{"id":"` + id + `","name":"n"}`)
-		req := httptest.NewRequest(http.MethodPost, "/widgets", body)
 		rec := httptest.NewRecorder()
-		h.ServeHTTP(rec, req)
+		h.ServeHTTP(rec, newCreateRequest(`{"id":"`+id+`","name":"n"}`))
 		if rec.Code != http.StatusCreated {
 			t.Fatalf("seed %s status = %d, want 201", id, rec.Code)
 		}

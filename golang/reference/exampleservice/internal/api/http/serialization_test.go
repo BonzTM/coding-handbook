@@ -1,6 +1,8 @@
 package http
 
 import (
+	"context"
+	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http"
@@ -25,8 +27,7 @@ func TestWidgetResponseGoldenJSON(t *testing.T) {
 	h := srv.Handler()
 
 	// The test server uses a fixed clock at unix 1700000000 (2023-11-14T22:13:20Z).
-	body := strings.NewReader(`{"id":"w1","name":"Widget One"}`)
-	req := httptest.NewRequest(http.MethodPost, "/widgets", body)
+	req := newCreateRequest(`{"id":"w1","name":"Widget One"}`)
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 
@@ -52,8 +53,7 @@ func TestListWidgetsGoldenJSON(t *testing.T) {
 	srv := newTestServer(t, true)
 	h := srv.Handler()
 
-	create := strings.NewReader(`{"id":"w1","name":"Widget One"}`)
-	createReq := httptest.NewRequest(http.MethodPost, "/widgets", create)
+	createReq := newCreateRequest(`{"id":"w1","name":"Widget One"}`)
 	createRec := httptest.NewRecorder()
 	h.ServeHTTP(createRec, createReq)
 	if createRec.Code != http.StatusCreated {
@@ -98,13 +98,94 @@ func TestCreateWidgetBodyTooLarge(t *testing.T) {
 	srv := newCappedServer(t, limit)
 	h := srv.Handler()
 
-	// A valid-looking JSON object whose "name" alone exceeds the cap.
+	// A valid-looking JSON object whose "name" alone exceeds the cap. The
+	// Idempotency-Key is required on the create route and is checked BEFORE the
+	// body is read, so set one here to reach the body-size-cap path under test.
 	oversized := `{"id":"w1","name":"` + strings.Repeat("x", limit*4) + `"}`
-	req := httptest.NewRequest(http.MethodPost, "/widgets", strings.NewReader(oversized))
+	req := newCreateRequest(oversized)
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("oversized body status = %d, want 400; body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+// TestErrorEnvelopeGoldenJSON pins the structured error envelope on a validation
+// failure: the exact keys, the top-level "validation_failed" code, and the
+// per-field "fields" shape (field path + per-field code), so a thinning or
+// rename of the error contract shows up as a diff, per
+// golang/foundations/serialization.md (Verification And Proof). The request_id
+// is non-deterministic, so it is replaced with a stable placeholder before the
+// byte comparison; its presence is asserted separately.
+func TestErrorEnvelopeGoldenJSON(t *testing.T) {
+	srv := newTestServer(t, true)
+	h := srv.Handler()
+
+	// Missing "name" triggers a field-level validation failure.
+	req := newCreateRequest(`{"id":"w1"}`)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400; body=%s", rec.Code, rec.Body.String())
+	}
+
+	// Pull the (non-deterministic) request_id out and assert it is present, then
+	// pin the remaining envelope byte-for-byte.
+	var parsed ErrorResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &parsed); err != nil {
+		t.Fatalf("decode envelope: %v", err)
+	}
+	if parsed.RequestID == "" {
+		t.Fatal("request_id missing from error envelope")
+	}
+	normalized := strings.Replace(strings.TrimRight(rec.Body.String(), "\n"), parsed.RequestID, "REQID", 1)
+	const golden = `{"code":"validation_failed","message":"the request has invalid fields","fields":[{"field":"name","code":"required","message":"name must not be empty"}],"request_id":"REQID"}`
+	if normalized != golden {
+		t.Errorf("error envelope JSON mismatch:\n got: %s\nwant: %s", normalized, golden)
+	}
+}
+
+// TestServerErrorIsOpaque proves a 5xx body carries NO internal detail: a
+// generic "internal" code and message, a request_id for correlation, and none
+// of the panic text, per golang/foundations/serialization.md (a 5xx is opaque;
+// detail lives in the log under the request_id). It drives the recovery
+// middleware directly with a handler that panics with a secret string.
+func TestServerErrorIsOpaque(t *testing.T) {
+	const secret = "super-secret-internal-detail"
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+
+	boom := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		panic(secret)
+	})
+	// Mirror the server's wiring: request ID is OUTERMOST so the id is on the
+	// context before recovery runs and the recovered 500 can echo it.
+	h := requestIDMiddleware(recoverMiddleware(logger)(boom))
+
+	req := httptest.NewRequest(http.MethodGet, "/widgets/x", nil).WithContext(context.Background())
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500; body=%s", rec.Code, rec.Body.String())
+	}
+	if strings.Contains(rec.Body.String(), secret) {
+		t.Errorf("5xx body leaks internal detail: %s", rec.Body.String())
+	}
+	var errResp ErrorResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &errResp); err != nil {
+		t.Fatalf("decode 5xx envelope: %v", err)
+	}
+	if errResp.Code != codeInternal {
+		t.Errorf("code = %q, want %q", errResp.Code, codeInternal)
+	}
+	if errResp.Message != http.StatusText(http.StatusInternalServerError) {
+		t.Errorf("message = %q, want generic %q", errResp.Message, http.StatusText(http.StatusInternalServerError))
+	}
+	if errResp.RequestID == "" {
+		t.Error("request_id missing from 5xx envelope")
+	}
+	if len(errResp.Fields) != 0 {
+		t.Errorf("5xx must not carry field errors, got %+v", errResp.Fields)
 	}
 }

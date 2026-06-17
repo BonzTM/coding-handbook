@@ -14,10 +14,20 @@ import (
 
 // PostgresIdempotency is a database/sql-backed core.IdempotencyStore. Like
 // Postgres it compiles against the standard library only (no driver linked); a
-// DB-backed build blank-imports a driver and wires it in main. It persists the
-// idempotency record in the same database as the widget write so the recipe's
-// atomicity guarantee (response stored with the side effect) holds; see
-// recipes/add-idempotent-write.md.
+// DB-backed build blank-imports a driver and wires it in main.
+//
+// Durability model (honest): as shipped, this store does CAPTURE-AND-REPLAY,
+// NOT single-transaction atomicity. Begin claims the key, the handler runs the
+// widget write and commits it, and Complete then persists the captured response
+// with a SEPARATE standalone UPDATE — so the domain write and the idempotency
+// record do NOT commit in one transaction. A crash after the write but before
+// Complete strands a committed write with no record, and the next retry
+// re-executes. The PRODUCTION-GRADE pattern that closes this gap is a single
+// *sql.Tx that claims the key, performs the write, and completes the record
+// before COMMIT (sqlcgen exposes Queries.WithTx(*sql.Tx) for exactly this); see
+// recipes/add-idempotent-write.md (Steps 4 and the Atomic-commit invariant).
+// This reference ships the simpler capture-and-replay form and documents the
+// gap rather than claiming an atomicity it does not provide.
 //
 // The TTL is enforced in SQL via the expires_at column: Begin reclaims an
 // expired row on conflict and Get filters on expires_at, so an abandoned

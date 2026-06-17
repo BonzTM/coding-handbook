@@ -187,13 +187,13 @@ func (s *Service) CreateWidget(ctx context.Context, id, name string) (Widget, er
 		return Widget{}, fmt.Errorf("%w: %s requires role %s", ErrForbidden, p.Subject, RoleWriter)
 	}
 	if id == "" {
-		return Widget{}, errInvalidf("id must not be empty")
+		return Widget{}, errField("id", CodeRequired, "id must not be empty")
 	}
 	if name == "" {
-		return Widget{}, errInvalidf("name must not be empty")
+		return Widget{}, errField("name", CodeRequired, "name must not be empty")
 	}
 	if len(name) > maxNameLen {
-		return Widget{}, errInvalidf("name must be at most %d bytes", maxNameLen)
+		return Widget{}, errField("name", CodeOutOfRange, "name must be at most %d bytes", maxNameLen)
 	}
 
 	w := Widget{
@@ -223,7 +223,7 @@ func (s *Service) GetWidget(ctx context.Context, id string) (Widget, error) {
 		return Widget{}, fmt.Errorf("%w: %s requires role %s", ErrForbidden, p.Subject, RoleReader)
 	}
 	if id == "" {
-		return Widget{}, errInvalidf("id must not be empty")
+		return Widget{}, errField("id", CodeRequired, "id must not be empty")
 	}
 	return s.store.Get(ctx, p.TenantID, id)
 }
@@ -274,15 +274,39 @@ func (s *Service) ListWidgetsPage(ctx context.Context, after Cursor, pageSize in
 	return page, nil
 }
 
-// errInvalidf builds an ErrInvalidWidget-wrapping error with a specific reason
-// so the message is actionable while errors.Is(err, ErrInvalidWidget) holds.
-func errInvalidf(format string, args ...any) error {
-	return &invalidError{reason: fmt.Sprintf(format, args...)}
+// Per-field validation codes. They are a small, documented machine-readable
+// enum the transport surfaces in the error envelope's per-field code, per
+// golang/foundations/serialization.md ### Error Responses.
+const (
+	// CodeRequired marks a missing required field.
+	CodeRequired = "required"
+	// CodeOutOfRange marks a field whose value violates a bound.
+	CodeOutOfRange = "out_of_range"
+)
+
+// FieldValidationError is a validation failure tied to a single named input
+// field. It wraps ErrInvalidWidget so errors.Is(err, ErrInvalidWidget) still
+// holds (and the boundary maps it to 400), while the transport can also
+// errors.As it to populate the structured envelope's per-field detail. It is a
+// value type so errors.As binds it directly.
+type FieldValidationError struct {
+	// Field is the offending input field, a dotted path into the request body.
+	Field string
+	// Code is the machine-readable per-field enum (CodeRequired, CodeOutOfRange).
+	Code string
+	// Reason is the human-readable detail.
+	Reason string
 }
 
-type invalidError struct{ reason string }
+func (e FieldValidationError) Error() string {
+	return "invalid widget: " + e.Field + ": " + e.Reason
+}
 
-func (e *invalidError) Error() string { return "invalid widget: " + e.reason }
+// Unwrap lets errors.Is(err, ErrInvalidWidget) succeed so the boundary's
+// status/code mapping treats a field error as a 400 validation failure.
+func (e FieldValidationError) Unwrap() error { return ErrInvalidWidget }
 
-// Unwrap lets errors.Is(err, ErrInvalidWidget) succeed.
-func (e *invalidError) Unwrap() error { return ErrInvalidWidget }
+// errField builds a FieldValidationError with a formatted reason.
+func errField(field, code, format string, args ...any) error {
+	return FieldValidationError{Field: field, Code: code, Reason: fmt.Sprintf(format, args...)}
+}

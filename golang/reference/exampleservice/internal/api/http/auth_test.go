@@ -122,7 +122,7 @@ func TestAuthzWriterCanWrite(t *testing.T) {
 	s := newTokenSigner(t)
 	h := s.authServer(t)
 
-	req := httptest.NewRequest(http.MethodPost, "/widgets", strings.NewReader(`{"id":"w1","name":"n"}`))
+	req := newCreateRequest(`{"id":"w1","name":"n"}`)
 	req.Header.Set("Authorization", "Bearer "+s.token(t, "tenant-1", []string{"widgets.writer"}))
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
@@ -139,7 +139,7 @@ func TestAuthzCrossTenantReadIsNotFound(t *testing.T) {
 	h := s.authServer(t)
 
 	// Tenant A creates w1.
-	create := httptest.NewRequest(http.MethodPost, "/widgets", strings.NewReader(`{"id":"w1","name":"a-widget"}`))
+	create := newCreateRequest(`{"id":"w1","name":"a-widget"}`)
 	create.Header.Set("Authorization", "Bearer "+s.token(t, "tenant-a", []string{"widgets.writer"}))
 	crec := httptest.NewRecorder()
 	h.ServeHTTP(crec, create)

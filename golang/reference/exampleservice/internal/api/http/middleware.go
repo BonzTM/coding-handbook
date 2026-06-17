@@ -61,8 +61,14 @@ func recoverMiddleware(logger *slog.Logger) func(http.Handler) http.Handler {
 						"route", routePattern(r),
 						"panic", rec,
 					)
-					writeJSON(w, r, logger, http.StatusInternalServerError,
-						errorResponse{Error: http.StatusText(http.StatusInternalServerError)})
+					// Opaque 5xx envelope: a machine-readable code and a generic
+					// message, with the request_id so the client can quote it. The
+					// panic detail stays in the log above, never in the body.
+					writeJSON(w, r, logger, http.StatusInternalServerError, ErrorResponse{
+						Code:      codeInternal,
+						Message:   http.StatusText(http.StatusInternalServerError),
+						RequestID: requestIDFrom(r.Context()),
+					})
 				}
 			}()
 			next.ServeHTTP(w, r)

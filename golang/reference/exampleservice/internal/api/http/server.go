@@ -160,11 +160,14 @@ func (s *Server) routes() http.Handler {
 	}
 	root.Handle("/", apiHandler)
 
-	// Request ID and recovery wrap both branches; recovery is outermost so a
-	// panic anywhere becomes a 500. Logging lives inside the API branch only.
+	// Request ID and recovery wrap both branches. Request ID is OUTERMOST so the
+	// id is on the context before recovery runs: a panic-recovered 500 can then
+	// echo the request_id in its error envelope (the serialization doc requires a
+	// 5xx body to carry the correlation id). Recovery wraps the rest so a panic
+	// anywhere inside becomes a 500. Logging lives inside the API branch only.
 	var h http.Handler = root
-	h = requestIDMiddleware(h)
 	h = recoverMiddleware(s.logger)(h)
+	h = requestIDMiddleware(h)
 	return h
 }
 
