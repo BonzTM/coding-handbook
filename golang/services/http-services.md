@@ -62,6 +62,8 @@ Use a stable order so failures are observable and safe:
 4. access logging and metrics
 5. handler
 
+Authentication stays outermost (before logging) so unauthenticated requests are rejected early. Per-route *authorization*, by contrast, MAY run just inside logging/metrics so the authz decision and the matched route land in the access log — [reference/exampleservice/](../reference/exampleservice/) does exactly this, keeping authN at the edge while running RBAC/tenancy checks after the logging middleware.
+
 ### List Endpoints And Pagination
 
 Every endpoint that returns a collection is paginated from the start — an unbounded list is a latency and memory incident waiting for the table to grow.

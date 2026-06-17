@@ -20,7 +20,7 @@ Read this file first, then use [maintainer-map.md](maintainer-map.md) when you k
 - Lint policy lives in [quality/linting.md](quality/linting.md); time and clock discipline in [foundations/time.md](foundations/time.md); copy-paste scaffolding in [templates/](templates/).
 - Architecture decisions and their rationale live in [decisions/architecture-decision-records.md](decisions/architecture-decision-records.md); project ownership transfer in [onboarding-and-handoff.md](onboarding-and-handoff.md).
 - Shared vocabulary lives in [glossary.md](glossary.md); how to change this handbook lives in [CONTRIBUTING.md](CONTRIBUTING.md).
-- A complete, compiling worked example lives in [reference/exampleservice/](reference/exampleservice/) (`make verify`-green); mirror its structure for a new service rather than inventing one.
+- Complete, compiling worked examples live under `reference/` (all `make verify`-green): [reference/exampleservice/](reference/exampleservice/) embodies the HTTP+Postgres shape, [reference/examplegrpc/](reference/examplegrpc/) the gRPC shape, and [reference/exampleworker/](reference/exampleworker/) the event-driven worker shape; mirror the one matching your shape rather than inventing a structure.
 
 ## Fast Path
 
@@ -61,6 +61,10 @@ Read this file first, then use [maintainer-map.md](maintainer-map.md) when you k
 | queries, migrations, transactions | [services/database.md](services/database.md) |
 | telemetry, `/metrics`, tracing, readiness | [operations/observability.md](operations/observability.md) |
 | auth, secrets, file paths, supply chain | [operations/security.md](operations/security.md) |
+| audit logging of security-relevant actions | [operations/security.md](operations/security.md) (### Audit Logging) |
+| data classification, PII, retention, compliance | [operations/data-handling.md](operations/data-handling.md) |
+| pre-build WHAT decisions (scope, acceptance, spec intake) | [checklists/spec-intake.md](checklists/spec-intake.md) |
+| idempotent HTTP writes (Idempotency-Key, safe retries) | [recipes/add-idempotent-write.md](recipes/add-idempotent-write.md) |
 | CI, build, release, containers | [operations/ci-and-release.md](operations/ci-and-release.md) |
 | new dependency or framework choice | [decisions/framework-selection.md](decisions/framework-selection.md) |
 | lint rules, golangci-lint config, formatters | [quality/linting.md](quality/linting.md) |

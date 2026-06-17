@@ -85,6 +85,8 @@ go get -tool github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 
 Each command records a `tool` directive in `go.mod`; run them as `go tool govulncheck ./...`, `go tool staticcheck ./...`, and so on. The pre-1.24 `tools.go` blank-import pattern is obsolete — reach for it only when a module is pinned below `go 1.24`. Use tool directives for CLI tools only; do not smuggle runtime dependencies into them.
 
+Pinning current tools as `tool` directives (golangci-lint, sqlc) can raise the module's `go` directive to match the highest `go` floor those tools require — the reference modules sit at `go 1.26.x` for this reason. That is expected and fine; the handbook's language baseline stays "1.24+", and the `go` line simply tracks the tool floor when tools are pinned.
+
 ## Build Defaults
 
 - Use `-trimpath` for release and distribution builds so local filesystem paths are not embedded in the binary; it is unnecessary for the routine `go build ./...` compile check and forks the build cache.

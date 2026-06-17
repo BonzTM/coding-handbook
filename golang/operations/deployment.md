@@ -39,6 +39,15 @@ Go's runtime defaults assume it sees the whole host. In a container with cgroup 
 - **Memory — set `GOMEMLIMIT`.** Set it to a soft ceiling *below* the container memory limit (a common starting point is ~90% of the limit, e.g. `GOMEMLIMIT=900MiB` under a 1 GiB limit). `GOMEMLIMIT` makes the GC work harder as the heap approaches the ceiling instead of letting the kernel OOM-kill the process. It is a soft limit, so leave headroom for non-heap memory (stacks, mmap, off-heap). Drive it from the deployment manifest so it tracks the limit.
 - **CPU — right-size `GOMAXPROCS` to the CPU quota.** A pod with a 2-core quota on a 64-core node still defaults `GOMAXPROCS` to 64, producing oversubscription and scheduler-induced throttling. Set `GOMAXPROCS` to the integer CPU quota, or adopt the `automaxprocs` convention to derive it from the cgroup at startup. The specific mechanism (env var driven by the manifest vs. an `automaxprocs`-style library import) is a library choice routed to [decisions/framework-selection.md](../decisions/framework-selection.md); the *requirement* — `GOMAXPROCS` matches the quota — is not optional.
 
+### Secrets And Config Injection
+
+Secrets and environment-specific config reach the container at RUNTIME from the platform; they are never baked into the image.
+
+- Inject secrets as environment variables or files mounted from the orchestrator's secret store (a Kubernetes Secret, a cloud secrets-manager CSI driver, or a Vault agent/sidecar); the image, its layers, and its build args contain NO secret material (see [security.md](security.md#secrets)). The specific manager is a [framework-selection](../decisions/framework-selection.md) choice.
+- The process reads injected material once at startup through `internal/config` with fail-fast validation; it does not fetch-and-cache long-lived plaintext itself.
+- Rotation: the default is a rolling restart that re-runs the startup load; a secret that must rotate without a restart re-reads its mounted file or env on `SIGHUP`. Decide per secret and record it in the [runbook](../templates/runbook.md).
+- Per-environment values (staging vs production) come from the manifest and secret store, not from env-specific defaults committed to source.
+
 ### Health Probes
 
 - Liveness probe -> `GET /livez`: process-up only. Failing it restarts the container, so it must not depend on downstreams (see [operations/observability.md](observability.md)).

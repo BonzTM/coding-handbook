@@ -37,6 +37,8 @@ Before adding a dependency, answer all of these:
 | testing helpers | stdlib `testing` | `go-cmp`, `testify/require`, `goleak` where they clearly improve signal | assertion DSLs that obscure behavior |
 | release automation | simple scripts or CI | GoReleaser when matrix packaging becomes real work | heavyweight tooling nobody on the team understands |
 | binary linkage | pure-Go / `CGO_ENABLED=0` static | cgo ONLY with an ADR, after ruling out a pure-Go alternative | cgo pulled in transitively unnoticed |
+| secrets manager | injected env vars or mounted files from an external manager (the app reads injected material at startup) | Vault, a cloud KMS / Secrets Manager, or sealed-secrets when the platform provides one | embedding plaintext in source/image/build args, or the app fetching and caching long-lived plaintext itself |
+| audit / log sink | structured `log/slog` to a dedicated audit stream the platform collects | a SIEM, managed audit service, or append-only store when compliance requires tamper-evidence | mixing audit events into the shared application log; no retention or access control on the sink |
 
 ## Common Mistakes And Forbidden Patterns
 

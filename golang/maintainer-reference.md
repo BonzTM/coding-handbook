@@ -30,6 +30,8 @@ repo/
 
 This follows the official module-layout guidance from `go.dev/doc/modules/layout`. Community project-layout repos may offer ideas, but they are not the primary authority and they should not override the simpler `cmd/` plus `internal/` baseline unless a real codebase need appears. A complete, compiling instance of this architecture lives at [reference/exampleservice/](reference/exampleservice/) (`make verify`-green); read it alongside this map to see the boundaries embodied in real code.
 
+Three compiling reference modules under [reference/](reference/) embody this architecture for the main service shapes — [exampleservice](reference/exampleservice/) (HTTP+Postgres), [examplegrpc](reference/examplegrpc/) (gRPC), and [exampleworker](reference/exampleworker/) (event-driven worker) — and are all `make verify`-green.
+
 ## Two-Speed Documentation Model
 
 - Fast path: [AGENTS.md](AGENTS.md) for invariants, task loop, and baseline proof.
