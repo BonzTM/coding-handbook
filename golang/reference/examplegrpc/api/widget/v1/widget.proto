@@ -1,0 +1,63 @@
+// widget.v1 is the versioned wire contract for the widgets service. The package
+// and directory stay versioned even at v1, per golang/services/grpc-services.md.
+// Messages are transport DTOs, not database tables; domain logic lives in
+// internal/core, never in generated types.
+syntax = "proto3";
+
+package widget.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/example/examplegrpc/api/widget/v1;widgetv1";
+
+// WidgetService manages widgets within the caller's tenant. The tenant is
+// resolved from the authenticated principal on the server, never carried in a
+// request field, so a caller cannot address another tenant's data.
+service WidgetService {
+  // CreateWidget creates a widget. Returns AlreadyExists if the id is taken and
+  // InvalidArgument on validation failure.
+  rpc CreateWidget(CreateWidgetRequest) returns (CreateWidgetResponse);
+  // GetWidget returns a widget by id, or NotFound.
+  rpc GetWidget(GetWidgetRequest) returns (GetWidgetResponse);
+  // ListWidgets returns a keyset-paginated page of widgets.
+  rpc ListWidgets(ListWidgetsRequest) returns (ListWidgetsResponse);
+}
+
+// Widget is the wire representation of a widget.
+message Widget {
+  string id = 1;
+  string name = 2;
+  google.protobuf.Timestamp created_at = 3;
+}
+
+message CreateWidgetRequest {
+  string id = 1;
+  string name = 2;
+}
+
+message CreateWidgetResponse {
+  Widget widget = 1;
+}
+
+message GetWidgetRequest {
+  string id = 1;
+}
+
+message GetWidgetResponse {
+  Widget widget = 1;
+}
+
+message ListWidgetsRequest {
+  // page_size is the maximum number of widgets to return. The server clamps it
+  // to a default when unset (0) and to a maximum when too large.
+  int32 page_size = 1;
+  // page_token is the opaque cursor returned as next_page_token by a prior call.
+  // Empty starts from the beginning. A malformed token is InvalidArgument.
+  string page_token = 2;
+}
+
+message ListWidgetsResponse {
+  repeated Widget widgets = 1;
+  // next_page_token is the cursor for the next page, or empty on the last page.
+  string next_page_token = 2;
+}

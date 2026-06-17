@@ -1,0 +1,25 @@
+# Build output and binaries
+/bin
+/out
+/dist
+*.exe
+exampleworker
+
+# Test and coverage artifacts
+*.test
+cover.out
+coverage.out
+coverage.html
+*.prof
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Editor/IDE cruft
+.idea
+.vscode
+*.swp
+.DS_Store

@@ -1,0 +1,16 @@
+# buf code generation. Deterministic codegen: protoc-gen-go + protoc-gen-go-grpc
+# pinned as module tool deps (see go.mod tool directives). Generated *.pb.go are
+# committed; `make verify` regenerates and asserts no diff so codegen stays
+# deterministic. go_package in the proto sets the import path.
+version: v2
+managed:
+  enabled: true
+plugins:
+  - local: protoc-gen-go
+    out: api
+    opt: paths=source_relative
+  - local: protoc-gen-go-grpc
+    out: api
+    opt: paths=source_relative
+inputs:
+  - directory: api

@@ -1,0 +1,17 @@
+# buf module configuration. Lints the wire contracts under api/ and enforces
+# backward-compatibility-friendly defaults. Run via `buf lint` and
+# `buf generate` (the Makefile wires both, plus a no-diff gen check).
+version: v2
+modules:
+  - path: api
+lint:
+  use:
+    - STANDARD
+  except:
+    # The handbook nests the versioned package one level under the service dir
+    # (widget/v1), so the proto path is api/widget/v1/widget.proto rather than
+    # the buf-default <package>/<version>/file.proto. Allow it.
+    - PACKAGE_DIRECTORY_MATCH
+breaking:
+  use:
+    - FILE
