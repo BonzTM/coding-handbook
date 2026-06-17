@@ -8,6 +8,7 @@ package http
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -31,9 +32,33 @@ func statusForError(err error) int {
 		return http.StatusConflict
 	case errors.Is(err, core.ErrInvalidWidget):
 		return http.StatusBadRequest
+	case errors.Is(err, core.ErrInvalidCursor):
+		return http.StatusBadRequest
+	case errors.Is(err, core.ErrUnauthenticated):
+		return http.StatusUnauthorized
+	case errors.Is(err, core.ErrForbidden):
+		return http.StatusForbidden
+	case errors.Is(err, core.ErrIdempotencyInFlight):
+		return http.StatusConflict
+	case errors.Is(err, core.ErrIdempotencyKeyMismatch):
+		return http.StatusUnprocessableEntity
 	default:
 		return http.StatusInternalServerError
 	}
+}
+
+// unauthenticated wraps an auth-verification failure as core.ErrUnauthenticated
+// so statusForError yields 401. The underlying detail (which check failed) is
+// preserved for the boundary log but never reaches the client: the response
+// body for a 401 is the generic status text.
+func unauthenticated(err error) error {
+	return fmt.Errorf("%w: %s", core.ErrUnauthenticated, err.Error())
+}
+
+// forbidden builds a core.ErrForbidden-wrapping error naming the missing role,
+// so statusForError yields 403 and the boundary log records what was required.
+func forbidden(subject string, want core.Role) error {
+	return fmt.Errorf("%w: %s lacks role %s", core.ErrForbidden, subject, want)
 }
 
 // writeError maps err to a status, logs it once at the boundary, and encodes a
@@ -58,8 +83,11 @@ func writeError(w http.ResponseWriter, r *http.Request, logger *slog.Logger, err
 
 	msg := http.StatusText(status)
 	// For client-class errors the error message is safe and actionable; for
-	// server-class errors we hide the detail behind the generic status text.
-	if status < http.StatusInternalServerError {
+	// server-class errors we hide the detail behind the generic status text. A
+	// 401 is deliberately also generic: leaking which token check failed
+	// (expired vs. wrong audience vs. missing claim) helps an attacker, so the
+	// detail stays in the boundary log only.
+	if status < http.StatusInternalServerError && status != http.StatusUnauthorized {
 		msg = err.Error()
 	}
 	writeJSON(w, r, logger, status, errorResponse{Error: msg})

@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/example/exampleservice/internal/config"
 	"github.com/example/exampleservice/internal/core"
+	"github.com/example/exampleservice/internal/db/sqlcgen"
 )
 
 // Postgres is a database/sql-backed core.Store implementation. It is a
@@ -79,54 +81,86 @@ func (p *Postgres) Stats() sql.DBStats { return p.db.Stats() }
 // requests have drained.
 func (p *Postgres) Close() error { return p.db.Close() }
 
+// queries is the sqlc-generated query set, bound to the same *sql.DB pool. The
+// hand-written methods below delegate to it so the SQL is type-checked and
+// generated from internal/db/queries.sql against the goose migration schema,
+// per golang/services/database.md (sqlc for the typed query layer). Keeping the
+// methods thin lets them map driver/scan errors to the core sentinels — the one
+// responsibility sqlc deliberately leaves to the storage layer.
+func (p *Postgres) queries() *sqlcgen.Queries { return sqlcgen.New(p.db) }
+
 // Create inserts a widget. The unique-violation path is mapped to
 // core.ErrAlreadyExists. Note: a production impl would inspect the driver's
 // typed error (e.g. pgconn.PgError code 23505) rather than relying on the
 // generic insert error; that mapping belongs here in the storage layer.
 func (p *Postgres) Create(ctx context.Context, w core.Widget) error {
-	const query = `INSERT INTO widgets (id, name, created_at) VALUES ($1, $2, $3)`
-	// Context is threaded through ExecContext per the database doc.
-	_, err := p.db.ExecContext(ctx, query, w.ID, w.Name, w.CreatedAt.UTC())
+	// Context is threaded through the generated method per the database doc.
+	err := p.queries().CreateWidget(ctx, sqlcgen.CreateWidgetParams{
+		ID:        w.ID,
+		TenantID:  w.TenantID,
+		Name:      w.Name,
+		CreatedAt: w.CreatedAt.UTC(),
+	})
 	if err != nil {
 		return fmt.Errorf("insert widget: %w", err)
 	}
 	return nil
 }
 
-// Get loads a widget by ID, mapping sql.ErrNoRows to core.ErrNotFound.
-func (p *Postgres) Get(ctx context.Context, id string) (core.Widget, error) {
-	const query = `SELECT id, name, created_at FROM widgets WHERE id = $1`
-	var w core.Widget
-	err := p.db.QueryRowContext(ctx, query, id).Scan(&w.ID, &w.Name, &w.CreatedAt)
+// Get loads a widget by ID within tenantID, mapping sql.ErrNoRows to
+// core.ErrNotFound. The tenant_id predicate means a widget under another tenant
+// is reported as not found, never returned.
+func (p *Postgres) Get(ctx context.Context, tenantID, id string) (core.Widget, error) {
+	row, err := p.queries().GetWidget(ctx, sqlcgen.GetWidgetParams{TenantID: tenantID, ID: id})
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return core.Widget{}, core.ErrNotFound
 	case err != nil:
 		return core.Widget{}, fmt.Errorf("select widget: %w", err)
 	}
-	return w, nil
+	return core.Widget{
+		ID:        row.ID,
+		TenantID:  row.TenantID,
+		Name:      row.Name,
+		CreatedAt: row.CreatedAt,
+	}, nil
 }
 
-// List returns all widgets ordered by ID. Rows are closed and Rows.Err is
-// checked after iteration, per the linting gate (rowserrcheck/sqlclosecheck).
-func (p *Postgres) List(ctx context.Context) ([]core.Widget, error) {
-	const query = `SELECT id, name, created_at FROM widgets ORDER BY id`
-	rows, err := p.db.QueryContext(ctx, query)
+// ListPage returns up to limit widgets WITHIN tenantID after the given keyset
+// cursor, ordered by the stable (created_at, id) key — the index the migration
+// creates leads with tenant_id so each page is a per-tenant index range. The
+// generated query uses a row-comparison boundary so a zero cursor lists from the
+// beginning and a non-zero one resumes strictly after the previous page's last
+// row, with id as the tiebreaker so pages neither overlap nor skip rows under
+// concurrent writes.
+func (p *Postgres) ListPage(ctx context.Context, tenantID string, after core.Cursor, limit int) ([]core.Widget, error) {
+	if limit <= 0 {
+		return nil, nil
+	}
+	// Clamp to int32 before passing to the generated query: the SQL LIMIT is an
+	// int32 and an over-large request would otherwise wrap on conversion. The
+	// service already clamps to a small page size, so this is a defensive belt.
+	if limit > math.MaxInt32 {
+		limit = math.MaxInt32
+	}
+	rows, err := p.queries().ListWidgets(ctx, sqlcgen.ListWidgetsParams{
+		TenantID:        tenantID,
+		FromStart:       after.IsZero(),
+		CursorCreatedAt: after.CreatedAt.UTC(),
+		CursorID:        after.ID,
+		PageLimit:       int32(limit),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("query widgets: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
-
-	var out []core.Widget
-	for rows.Next() {
-		var w core.Widget
-		if err := rows.Scan(&w.ID, &w.Name, &w.CreatedAt); err != nil {
-			return nil, fmt.Errorf("scan widget: %w", err)
-		}
-		out = append(out, w)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate widgets: %w", err)
+	out := make([]core.Widget, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, core.Widget{
+			ID:        row.ID,
+			TenantID:  row.TenantID,
+			Name:      row.Name,
+			CreatedAt: row.CreatedAt,
+		})
 	}
 	return out, nil
 }

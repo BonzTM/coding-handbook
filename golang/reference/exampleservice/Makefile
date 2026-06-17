@@ -10,9 +10,10 @@
 # Conventions:
 #   - Language baseline Go 1.24+; tools are run via `go tool <name>` (added with
 #     `go get -tool`).
-#   - Pinning golangci-lint as a `go tool` dependency raises the module's go.mod
-#     `go` directive to 1.25 (its tool graph requires Go 1.25); `go mod tidy`
-#     re-asserts this. The 1.24+ baseline still describes the service code.
+#   - Pinning golangci-lint and sqlc as `go tool` dependencies raises the
+#     module's go.mod `go` directive (the sqlc tool graph requires Go 1.26);
+#     `go mod tidy` re-asserts this and the root go.work follows. The 1.24+
+#     baseline still describes the service code.
 #   - golangci-lint and govulncheck are tool dependencies, never global installs.
 #   - -trimpath belongs to release builds only, never the routine `build` target.
 

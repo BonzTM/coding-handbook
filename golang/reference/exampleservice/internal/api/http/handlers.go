@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/example/exampleservice/internal/core"
@@ -30,10 +31,13 @@ type widgetResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// listWidgetsResponse wraps the collection so the top-level JSON value is an
-// object (extensible) rather than a bare array.
+// listWidgetsResponse is the keyset-pagination envelope mandated by
+// golang/services/http-services.md ### List Endpoints And Pagination: an items
+// array plus an opaque next_cursor. next_cursor is "" on the last page. The
+// shape is a stable wire contract shared across list endpoints.
 type listWidgetsResponse struct {
-	Widgets []widgetResponse `json:"widgets"`
+	Items      []widgetResponse `json:"items"`
+	NextCursor string           `json:"next_cursor"`
 }
 
 func toWidgetResponse(w core.Widget) widgetResponse {
@@ -80,19 +84,55 @@ func (s *Server) handleGetWidget(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, r, s.logger, http.StatusOK, toWidgetResponse(widget))
 }
 
-// handleListWidgets handles GET /widgets.
+// handleListWidgets handles GET /widgets with keyset pagination. It reads an
+// optional page_size (clamped server-side) and an opaque cursor query
+// parameter, decodes the cursor, asks the service for one page, and returns the
+// {items, next_cursor} envelope. A malformed cursor or non-numeric page_size is
+// a client error (400) mapped at the boundary; an oversized page_size is clamped
+// by the service, never rejected.
 func (s *Server) handleListWidgets(w http.ResponseWriter, r *http.Request) {
-	widgets, err := s.svc.ListWidgets(r.Context())
+	pageSize, err := parsePageSize(r.URL.Query().Get("page_size"))
 	if err != nil {
 		writeError(w, r, s.logger, err)
 		return
 	}
 
-	resp := listWidgetsResponse{Widgets: make([]widgetResponse, 0, len(widgets))}
-	for _, wg := range widgets {
-		resp.Widgets = append(resp.Widgets, toWidgetResponse(wg))
+	cursor, err := core.DecodeCursor(r.URL.Query().Get("cursor"))
+	if err != nil {
+		writeError(w, r, s.logger, err)
+		return
+	}
+
+	page, err := s.svc.ListWidgetsPage(r.Context(), cursor, pageSize)
+	if err != nil {
+		writeError(w, r, s.logger, err)
+		return
+	}
+
+	resp := listWidgetsResponse{
+		Items:      make([]widgetResponse, 0, len(page.Widgets)),
+		NextCursor: core.EncodeCursor(page.NextCursor),
+	}
+	for _, wg := range page.Widgets {
+		resp.Items = append(resp.Items, toWidgetResponse(wg))
 	}
 	writeJSON(w, r, s.logger, http.StatusOK, resp)
+}
+
+// parsePageSize reads the optional page_size query parameter. An empty value
+// means "use the server default" and yields 0 (which the service treats as the
+// default). A present-but-non-numeric value is a client error mapped to 400 via
+// ErrInvalidWidget; the service clamps an oversized numeric value rather than
+// rejecting it.
+func parsePageSize(raw string) (int, error) {
+	if raw == "" {
+		return 0, nil
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0, fmt.Errorf("%w: page_size must be an integer", core.ErrInvalidWidget)
+	}
+	return n, nil
 }
 
 // handleLivez reports process liveness: if this handler runs, the process is

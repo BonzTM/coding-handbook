@@ -1,0 +1,25 @@
+# sqlc configuration (schema version 2). Generates the typed query layer in
+# internal/db/sqlcgen from internal/db/queries.sql against the goose migration
+# schema. sqlc is pinned as a module tool (go get -tool github.com/sqlc-dev/sqlc/cmd/sqlc);
+# regenerate with: go tool sqlc generate.
+#
+# Engine is postgresql; the generated code targets database/sql (sql_package:
+# database/sql) so it runs against any registered Postgres driver (e.g. the pgx
+# stdlib driver) without taking a driver dependency in the reference build, per
+# golang/services/database.md.
+version: "2"
+sql:
+  - engine: postgresql
+    schema: internal/db/migrations
+    queries: internal/db/queries.sql
+    gen:
+      go:
+        package: sqlcgen
+        out: internal/db/sqlcgen
+        sql_package: database/sql
+        emit_exact_table_names: false
+        emit_json_tags: false
+        emit_db_tags: false
+        emit_prepared_queries: false
+        emit_interface: true
+        emit_empty_slices: true

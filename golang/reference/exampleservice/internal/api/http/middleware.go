@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"go.opentelemetry.io/otel/trace"
 )
 
 // ctxKey is an unexported context key type so values cannot collide with keys
@@ -84,8 +86,10 @@ func requestIDMiddleware(next http.Handler) http.Handler {
 }
 
 // loggingMiddleware emits one access log line per request with method, route
-// pattern, status, and duration, plus the request ID. It records metrics with
-// low-cardinality labels (route pattern + status class).
+// pattern, status, and duration, plus the request ID and (when present) the
+// W3C trace and span IDs pulled from the request's span context. It records
+// metrics with low-cardinality labels (route pattern + status class) and, when
+// the metrics impl supports it, a latency histogram.
 func loggingMiddleware(logger *slog.Logger, metrics requestMetrics) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -95,14 +99,38 @@ func loggingMiddleware(logger *slog.Logger, metrics requestMetrics) func(http.Ha
 			next.ServeHTTP(rec, r)
 
 			route := routePattern(r)
-			logger.InfoContext(r.Context(), "request",
+			class := statusClass(rec.status)
+			elapsed := time.Since(start)
+
+			// The route pattern is only known after the inner mux matched, so the
+			// span (started by otelhttp before routing) is renamed here to the
+			// low-cardinality "METHOD /pattern" rather than the raw path.
+			span := trace.SpanFromContext(r.Context())
+			if span.IsRecording() {
+				span.SetName(r.Method + " " + route)
+			}
+
+			attrs := []any{
 				"method", r.Method,
 				"route", route,
 				"status", rec.status,
-				"duration_ms", time.Since(start).Milliseconds(),
+				"duration_ms", elapsed.Milliseconds(),
 				"request_id", requestIDFrom(r.Context()),
-			)
-			metrics.IncRequest(route, statusClass(rec.status))
+			}
+			// Correlate the access log with the distributed trace: pull the span
+			// context off the request and, if it is valid, attach the IDs so logs
+			// and traces join on trace_id.
+			if sc := span.SpanContext(); sc.IsValid() {
+				attrs = append(attrs, "trace_id", sc.TraceID().String(), "span_id", sc.SpanID().String())
+			}
+			logger.InfoContext(r.Context(), "request", attrs...)
+
+			metrics.IncRequest(route, class)
+			// The Prometheus adapter also records a latency histogram; the no-op
+			// and expvar seams do not implement this, so it is an optional method.
+			if obs, ok := metrics.(latencyObserver); ok {
+				obs.ObserveRequest(route, class, elapsed.Seconds())
+			}
 		})
 	}
 }
@@ -111,6 +139,13 @@ func loggingMiddleware(logger *slog.Logger, metrics requestMetrics) func(http.Ha
 // needs. Defined at the consumer to keep the dependency narrow.
 type requestMetrics interface {
 	IncRequest(routePattern, statusClass string)
+}
+
+// latencyObserver is the optional latency-histogram seam. The Prometheus-backed
+// Metrics implements it; the no-op and expvar seams do not, so the middleware
+// type-asserts before calling.
+type latencyObserver interface {
+	ObserveRequest(routePattern, statusClass string, seconds float64)
 }
 
 // statusClass collapses a status code into a low-cardinality class label

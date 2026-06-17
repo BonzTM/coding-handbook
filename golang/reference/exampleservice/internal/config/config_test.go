@@ -26,6 +26,28 @@ func TestLoadDefaults(t *testing.T) {
 	}
 }
 
+func TestLoadMigrateOnStartup(t *testing.T) {
+	t.Setenv("HTTP_ADDR", ":8080")
+
+	// Default is off.
+	cfg, err := Load(nil)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Database.MigrateOnStartup {
+		t.Error("MigrateOnStartup default = true, want false")
+	}
+
+	// Flag enables it.
+	cfg, err = Load([]string{"-db-migrate-on-startup"})
+	if err != nil {
+		t.Fatalf("Load with flag: %v", err)
+	}
+	if !cfg.Database.MigrateOnStartup {
+		t.Error("MigrateOnStartup with -db-migrate-on-startup = false, want true")
+	}
+}
+
 func TestLoadFlagsBeatEnv(t *testing.T) {
 	// Precedence: flags > environment. The env sets one value, the flag another.
 	t.Setenv("HTTP_ADDR", ":1111")
@@ -98,6 +120,64 @@ func TestLoadMalformedEnvNotMaskedByFlag(t *testing.T) {
 	}
 }
 
+func TestLoadTelemetryTracingDefaults(t *testing.T) {
+	// With no OTLP keys set, the endpoint is empty (export disabled) and the
+	// sampling ratio falls back to the default.
+	t.Setenv("HTTP_ADDR", ":8080")
+	cfg, err := Load(nil)
+	if err != nil {
+		t.Fatalf("Load: unexpected error: %v", err)
+	}
+	if cfg.Telemetry.OTLPEndpoint != "" {
+		t.Errorf("OTLPEndpoint = %q, want empty", cfg.Telemetry.OTLPEndpoint)
+	}
+	if cfg.Telemetry.TraceSampleRatio != defaultTraceSampleRatio {
+		t.Errorf("TraceSampleRatio = %v, want %v", cfg.Telemetry.TraceSampleRatio, defaultTraceSampleRatio)
+	}
+}
+
+func TestLoadTelemetryTracingFromEnv(t *testing.T) {
+	t.Setenv("HTTP_ADDR", ":8080")
+	t.Setenv("OTLP_ENDPOINT", "otel-collector:4318")
+	t.Setenv("OTLP_INSECURE", "true")
+	t.Setenv("TRACE_SAMPLE_RATIO", "0.25")
+
+	cfg, err := Load(nil)
+	if err != nil {
+		t.Fatalf("Load: unexpected error: %v", err)
+	}
+	if cfg.Telemetry.OTLPEndpoint != "otel-collector:4318" {
+		t.Errorf("OTLPEndpoint = %q", cfg.Telemetry.OTLPEndpoint)
+	}
+	if !cfg.Telemetry.OTLPInsecure {
+		t.Error("OTLPInsecure = false, want true")
+	}
+	if cfg.Telemetry.TraceSampleRatio != 0.25 {
+		t.Errorf("TraceSampleRatio = %v, want 0.25", cfg.Telemetry.TraceSampleRatio)
+	}
+}
+
+func TestLoadInvalidSampleRatioRejected(t *testing.T) {
+	// Out-of-range and malformed sampling ratios are fail-fast.
+	t.Run("out of range", func(t *testing.T) {
+		t.Setenv("HTTP_ADDR", ":8080")
+		if _, err := Load([]string{"-trace-sample-ratio", "1.5"}); err == nil {
+			t.Fatal("expected error for ratio 1.5, got nil")
+		}
+	})
+	t.Run("malformed", func(t *testing.T) {
+		t.Setenv("HTTP_ADDR", ":8080")
+		t.Setenv("TRACE_SAMPLE_RATIO", "loads")
+		_, err := Load(nil)
+		if err == nil {
+			t.Fatal("expected error for malformed ratio, got nil")
+		}
+		if !strings.Contains(err.Error(), "TRACE_SAMPLE_RATIO") {
+			t.Errorf("error %q does not name TRACE_SAMPLE_RATIO", err)
+		}
+	})
+}
+
 func TestValidate(t *testing.T) {
 	base := func() Config {
 		return Config{
@@ -111,6 +191,7 @@ func TestValidate(t *testing.T) {
 				MaxIdleConns:    10,
 				ConnMaxLifetime: time.Minute,
 			},
+			Idempotency:   IdempotencyConfig{TTL: time.Hour},
 			ShutdownGrace: 10 * time.Second,
 		}
 	}
@@ -130,6 +211,18 @@ func TestValidate(t *testing.T) {
 		{"idle exceeds open", func(c *Config) { c.Database.MaxIdleConns = 999 }},
 		{"zero conn lifetime", func(c *Config) { c.Database.ConnMaxLifetime = 0 }},
 		{"zero shutdown grace", func(c *Config) { c.ShutdownGrace = 0 }},
+		{"sample ratio too high", func(c *Config) { c.Telemetry.TraceSampleRatio = 2 }},
+		{"sample ratio negative", func(c *Config) { c.Telemetry.TraceSampleRatio = -0.1 }},
+		{"zero idempotency ttl", func(c *Config) { c.Idempotency.TTL = 0 }},
+		{"auth enabled without issuer", func(c *Config) {
+			c.Auth = AuthConfig{Enabled: true, Audience: "a", JWKSURL: "https://x/jwks"}
+		}},
+		{"auth enabled without audience", func(c *Config) {
+			c.Auth = AuthConfig{Enabled: true, Issuer: "i", JWKSURL: "https://x/jwks"}
+		}},
+		{"auth enabled without jwks url", func(c *Config) {
+			c.Auth = AuthConfig{Enabled: true, Issuer: "i", Audience: "a"}
+		}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

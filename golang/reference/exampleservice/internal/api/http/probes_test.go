@@ -50,7 +50,7 @@ func TestProbesNotAccessLoggedOrMetered(t *testing.T) {
 	svc := core.NewService(db.NewMemory(), fixedClock{t: time.Unix(1700000000, 0).UTC()})
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	cfg := config.HTTPConfig{Addr: ":0", ReadHeaderTimeout: time.Second, MaxBodyBytes: 1 << 20}
-	srv := New(cfg, svc, logger, metrics, telemetry.NewReadiness(true))
+	srv := New(cfg, svc, logger, metrics, telemetry.NewReadiness(true), testDeps())
 	h := srv.Handler()
 
 	do := func(method, path string) int {

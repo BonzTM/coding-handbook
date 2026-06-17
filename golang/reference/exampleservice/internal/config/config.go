@@ -28,9 +28,39 @@ type Config struct {
 	Database DatabaseConfig
 	// Telemetry holds logging and metrics configuration.
 	Telemetry TelemetryConfig
+	// Auth holds the bearer-token authentication settings.
+	Auth AuthConfig
+	// Idempotency holds the Idempotency-Key middleware settings.
+	Idempotency IdempotencyConfig
 	// ShutdownGrace bounds ordered shutdown. It must exceed worst-case
 	// in-flight work and stay under the platform termination grace.
 	ShutdownGrace time.Duration
+}
+
+// AuthConfig configures bearer-token (JWT/JWKS) authentication. Auth is
+// config-gated: with Enabled false the service boots in a local/dev mode that
+// skips token verification (handlers see no principal and tenant-scoped
+// operations fail closed), so the reference runs offline without an identity
+// provider. With Enabled true the issuer, audience, and JWKSURL are required and
+// every API request must carry a valid Bearer token.
+type AuthConfig struct {
+	// Enabled gates the auth middleware. When false the service runs without
+	// authentication (local/dev); when true a valid Bearer JWT is required.
+	Enabled bool
+	// Issuer is the expected "iss" claim and identity-provider identity.
+	Issuer string
+	// Audience is the expected "aud" claim (this service's identifier).
+	Audience string
+	// JWKSURL is the JSON Web Key Set endpoint the verifier fetches signing keys
+	// from, e.g. "https://idp.example.com/.well-known/jwks.json".
+	JWKSURL string
+}
+
+// IdempotencyConfig configures the Idempotency-Key middleware for unsafe writes.
+type IdempotencyConfig struct {
+	// TTL bounds how long a stored idempotency record is replayable. After it
+	// lapses the key may be reused and abandoned in-flight keys are reclaimed.
+	TTL time.Duration
 }
 
 // HTTPConfig configures the HTTP server and its hardening timeouts.
@@ -63,14 +93,31 @@ type DatabaseConfig struct {
 	ConnMaxLifetime time.Duration
 	// ConnMaxIdleTime reaps idle connections so the pool shrinks under low load.
 	ConnMaxIdleTime time.Duration
+	// MigrateOnStartup applies pending goose migrations from the embedded FS
+	// before the service accepts traffic. It is off by default: schema changes
+	// are usually a separate, gated deploy step, but the reference exposes the
+	// hook so a single-instance dev/CI build can self-migrate. Ignored when DSN
+	// is empty (the in-memory store has no schema).
+	MigrateOnStartup bool
 }
 
-// TelemetryConfig configures structured logging and the metrics seam.
+// TelemetryConfig configures structured logging, tracing, and the metrics seam.
 type TelemetryConfig struct {
 	// LogLevel is the minimum slog level.
 	LogLevel slog.Level
 	// LogJSON selects JSON output (production) over text (local dev).
 	LogJSON bool
+	// OTLPEndpoint is the OTLP/HTTP trace collector endpoint (host:port, no
+	// scheme), e.g. "otel-collector:4318". Empty disables span export: the
+	// service installs a never-sampling provider so it runs offline. This is the
+	// config gate the observability doc describes.
+	OTLPEndpoint string
+	// OTLPInsecure sends spans over plaintext HTTP rather than TLS. Only for
+	// in-cluster collectors / local development.
+	OTLPInsecure bool
+	// TraceSampleRatio is the head-based parent sampling ratio in [0,1]. 1.0
+	// samples every trace; 0.0 samples none. Ignored when OTLPEndpoint is empty.
+	TraceSampleRatio float64
 }
 
 // Default values. Kept as named constants so the defaults are a single,
@@ -87,6 +134,8 @@ const (
 	defaultConnMaxLifetime   = 30 * time.Minute
 	defaultConnMaxIdleTime   = 5 * time.Minute
 	defaultShutdownGrace     = 15 * time.Second
+	defaultTraceSampleRatio  = 1.0
+	defaultIdempotencyTTL    = 24 * time.Hour
 )
 
 // Load reads configuration from flags and the environment, applies defaults,
@@ -119,9 +168,20 @@ func Load(args []string) (Config, error) {
 	maxIdleConns := fs.Int("db-max-idle-conns", env.int("DB_MAX_IDLE_CONNS", defaultMaxIdleConns), "max idle DB connections")
 	connMaxLifetime := fs.Duration("db-conn-max-lifetime", env.duration("DB_CONN_MAX_LIFETIME", defaultConnMaxLifetime), "max DB connection lifetime")
 	connMaxIdleTime := fs.Duration("db-conn-max-idle-time", env.duration("DB_CONN_MAX_IDLE_TIME", defaultConnMaxIdleTime), "max DB connection idle time")
+	migrateOnStartup := fs.Bool("db-migrate-on-startup", env.bool("DB_MIGRATE_ON_STARTUP", false), "apply embedded goose migrations on startup (DB-backed builds only)")
 
 	logLevel := fs.String("log-level", env.string("LOG_LEVEL", "info"), "log level (debug|info|warn|error)")
 	logJSON := fs.Bool("log-json", env.bool("LOG_JSON", true), "emit JSON logs (false for text)")
+	otlpEndpoint := fs.String("otlp-endpoint", env.string("OTLP_ENDPOINT", ""), "OTLP/HTTP trace endpoint host:port (empty disables span export)")
+	otlpInsecure := fs.Bool("otlp-insecure", env.bool("OTLP_INSECURE", false), "send spans over plaintext HTTP instead of TLS")
+	traceSampleRatio := fs.Float64("trace-sample-ratio", env.float64("TRACE_SAMPLE_RATIO", defaultTraceSampleRatio), "head-based trace sampling ratio in [0,1]")
+
+	authEnabled := fs.Bool("auth-enabled", env.bool("AUTH_ENABLED", false), "require a valid Bearer JWT on API requests (off for local/dev)")
+	authIssuer := fs.String("auth-issuer", env.string("AUTH_ISSUER", ""), "expected JWT issuer (iss) claim")
+	authAudience := fs.String("auth-audience", env.string("AUTH_AUDIENCE", ""), "expected JWT audience (aud) claim")
+	authJWKSURL := fs.String("auth-jwks-url", env.string("AUTH_JWKS_URL", ""), "JWKS endpoint URL the token verifier fetches signing keys from")
+
+	idempotencyTTL := fs.Duration("idempotency-ttl", env.duration("IDEMPOTENCY_TTL", defaultIdempotencyTTL), "how long a stored Idempotency-Key response is replayable")
 
 	shutdownGrace := fs.Duration("shutdown-grace", env.duration("SHUTDOWN_GRACE", defaultShutdownGrace), "graceful shutdown budget")
 
@@ -150,15 +210,28 @@ func Load(args []string) (Config, error) {
 			MaxBodyBytes:      *maxBodyBytes,
 		},
 		Database: DatabaseConfig{
-			DSN:             *dsn,
-			MaxOpenConns:    *maxOpenConns,
-			MaxIdleConns:    *maxIdleConns,
-			ConnMaxLifetime: *connMaxLifetime,
-			ConnMaxIdleTime: *connMaxIdleTime,
+			DSN:              *dsn,
+			MaxOpenConns:     *maxOpenConns,
+			MaxIdleConns:     *maxIdleConns,
+			ConnMaxLifetime:  *connMaxLifetime,
+			ConnMaxIdleTime:  *connMaxIdleTime,
+			MigrateOnStartup: *migrateOnStartup,
 		},
 		Telemetry: TelemetryConfig{
-			LogLevel: level,
-			LogJSON:  *logJSON,
+			LogLevel:         level,
+			LogJSON:          *logJSON,
+			OTLPEndpoint:     *otlpEndpoint,
+			OTLPInsecure:     *otlpInsecure,
+			TraceSampleRatio: *traceSampleRatio,
+		},
+		Auth: AuthConfig{
+			Enabled:  *authEnabled,
+			Issuer:   *authIssuer,
+			Audience: *authAudience,
+			JWKSURL:  *authJWKSURL,
+		},
+		Idempotency: IdempotencyConfig{
+			TTL: *idempotencyTTL,
 		},
 		ShutdownGrace: *shutdownGrace,
 	}
@@ -195,6 +268,28 @@ func (c Config) Validate() error {
 	}
 	if c.ShutdownGrace <= 0 {
 		return fmt.Errorf("config: SHUTDOWN_GRACE must be positive, got %s", c.ShutdownGrace)
+	}
+	// Sampling ratio is a probability; an out-of-range value is operator error,
+	// not something to silently clamp.
+	if c.Telemetry.TraceSampleRatio < 0 || c.Telemetry.TraceSampleRatio > 1 {
+		return fmt.Errorf("config: TRACE_SAMPLE_RATIO must be in [0,1], got %v", c.Telemetry.TraceSampleRatio)
+	}
+	// When auth is enabled the verifier's pins are required: booting with an
+	// empty issuer/audience/JWKS would accept or reject tokens unpredictably, so
+	// it is a fail-fast configuration error rather than a permissive default.
+	if c.Auth.Enabled {
+		if c.Auth.Issuer == "" {
+			return errors.New("config: AUTH_ISSUER must be set when AUTH_ENABLED=true")
+		}
+		if c.Auth.Audience == "" {
+			return errors.New("config: AUTH_AUDIENCE must be set when AUTH_ENABLED=true")
+		}
+		if c.Auth.JWKSURL == "" {
+			return errors.New("config: AUTH_JWKS_URL must be set when AUTH_ENABLED=true")
+		}
+	}
+	if c.Idempotency.TTL <= 0 {
+		return fmt.Errorf("config: IDEMPOTENCY_TTL must be positive, got %s", c.Idempotency.TTL)
 	}
 	return nil
 }
@@ -275,6 +370,19 @@ func (e *envReader) duration(key string, fallback time.Duration) time.Duration {
 		return fallback
 	}
 	return d
+}
+
+func (e *envReader) float64(key string, fallback float64) float64 {
+	v, ok := os.LookupEnv(key)
+	if !ok {
+		return fallback
+	}
+	f, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		e.errs = append(e.errs, fmt.Errorf("%s must be a number, got %q", key, v))
+		return fallback
+	}
+	return f
 }
 
 func (e *envReader) bool(key string, fallback bool) bool {

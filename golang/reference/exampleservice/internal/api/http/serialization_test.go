@@ -43,9 +43,11 @@ func TestWidgetResponseGoldenJSON(t *testing.T) {
 	}
 }
 
-// TestListWidgetsGoldenJSON pins the collection wrapper shape: a top-level
-// object with a "widgets" array (never a bare array), so the response stays
-// extensible and a wrapper rename is caught as a diff.
+// TestListWidgetsGoldenJSON pins the keyset-pagination envelope: a top-level
+// object with an "items" array and an opaque "next_cursor" (never a bare
+// array), so the response stays extensible and a wrapper or cursor-field rename
+// is caught as a diff. A single seeded widget fits in one page, so next_cursor
+// is the empty string.
 func TestListWidgetsGoldenJSON(t *testing.T) {
 	srv := newTestServer(t, true)
 	h := srv.Handler()
@@ -66,7 +68,7 @@ func TestListWidgetsGoldenJSON(t *testing.T) {
 	}
 
 	got := strings.TrimRight(rec.Body.String(), "\n")
-	const golden = `{"widgets":[{"id":"w1","name":"Widget One","created_at":"2023-11-14T22:13:20Z"}]}`
+	const golden = `{"items":[{"id":"w1","name":"Widget One","created_at":"2023-11-14T22:13:20Z"}],"next_cursor":""}`
 	if got != golden {
 		t.Errorf("list response JSON mismatch:\n got: %s\nwant: %s", got, golden)
 	}
@@ -83,7 +85,7 @@ func newCappedServer(t *testing.T, maxBodyBytes int64) *Server {
 		ReadHeaderTimeout: time.Second,
 		MaxBodyBytes:      maxBodyBytes,
 	}
-	return New(cfg, svc, logger, telemetry.NopMetrics{}, telemetry.NewReadiness(true))
+	return New(cfg, svc, logger, telemetry.NopMetrics{}, telemetry.NewReadiness(true), testDeps())
 }
 
 // TestCreateWidgetBodyTooLarge proves the body-size cap: a request body larger
