@@ -35,7 +35,7 @@ Review checklist for any security-sensitive change: a new boundary, auth or cryp
 ## Build Hardening
 
 - [ ] Release builds use `-trimpath`; no local filesystem paths are embedded in the artifact.
-- [ ] Static binary is produced when cgo is unnecessary.
+- [ ] Binary is built pure-Go (`CGO_ENABLED=0`); any cgo dependency is ADR-justified.
 - [ ] No secret material or embedded paths are present in the final artifact or image layers.
 
 ## Verification

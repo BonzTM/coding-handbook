@@ -90,7 +90,8 @@ Each command records a `tool` directive in `go.mod`; run them as `go tool govuln
 - Use `-trimpath` for release and distribution builds so local filesystem paths are not embedded in the binary; it is unnecessary for the routine `go build ./...` compile check and forks the build cache.
 - Keep `-buildvcs` enabled for release artifacts unless reproducibility requirements force a different mode.
 - Consider `default.pgo` only after collecting representative profiles; do not cargo-cult PGO into day-one repos.
-- `CGO_ENABLED=0` is a good default when the repo does not need cgo-backed libraries.
+- Build pure-Go static binaries by default: `CGO_ENABLED=0`. Cgo is an exception that requires an ADR — it breaks easy cross-compilation, blocks `static`/distroless deployment, and enlarges the build and supply-chain surface.
+- Prefer a pure-Go library over a cgo one when both exist (e.g. `modernc.org/sqlite` over `mattn/go-sqlite3`). The default Postgres driver `pgx` is already pure-Go.
 
 ## Common Mistakes And Forbidden Patterns
 

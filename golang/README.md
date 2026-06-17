@@ -38,6 +38,7 @@ Cross-cutting concerns apply across shapes: [services/caching.md](services/cachi
 - Use `log/slog` for structured logs. Log once at the boundary that can act.
 - Use real integration tests for database and external-service boundaries; do not mock everything by default.
 - Keep metric labels low-cardinality; request IDs and user IDs never belong in metrics.
+- Build pure-Go by default with `CGO_ENABLED=0`; a cgo dependency requires an ADR.
 - Do not commit `replace` directives, real secrets, or framework-heavy defaults without explicit justification.
 
 ## Default Stack

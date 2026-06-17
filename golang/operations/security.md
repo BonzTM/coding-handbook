@@ -45,7 +45,7 @@ Decide HOW a vulnerability reaches you before one does, so a reporter never has 
 
 - use `-trimpath`
 - keep `-buildvcs` enabled for traceability unless reproducibility requirements force an explicit alternative
-- prefer static binaries when cgo is unnecessary
+- build pure-Go static binaries by default (`CGO_ENABLED=0`); cgo is an ADR-justified exception — it enlarges the supply-chain surface and breaks `static`/distroless deployment
 
 ## Common Mistakes And Forbidden Patterns
 

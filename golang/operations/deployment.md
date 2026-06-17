@@ -12,6 +12,7 @@ The committed [`golang/templates/Dockerfile`](../templates/Dockerfile) and [`gol
 
 - Build stage uses the official `golang` image pinned to a specific patch (e.g. `golang:1.26.4`); the module's `go.mod` baseline stays `go 1.24` with the toolchain pinned to latest stable.
 - Compile a static binary: `CGO_ENABLED=0`. No cgo means no glibc dependency, which is what lets the runtime image be `static`/`scratch`.
+- Prefer pure-Go libraries (e.g. `modernc.org/sqlite` over `mattn/go-sqlite3`; the default `pgx` driver is already pure-Go) so the static `CGO_ENABLED=0` build stays trivial; a cgo dependency requires an ADR.
 - Build with `-trimpath` (strips local filesystem paths; release builds only, never the routine `make build`) and stamp version metadata through `-ldflags` into the `internal/buildinfo` package, matching the variables the binary already logs at startup (`Name`, `Version`, `Commit`).
 - The version stamped in is the release tag in canonical `v1.2.3` form (see [operations/ci-and-release.md](ci-and-release.md)).
 - Layer caching: copy `go.mod`/`go.sum` and run `go mod download` before copying source, so dependency layers cache independently of code changes.

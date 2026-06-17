@@ -34,6 +34,7 @@ Before adding a dependency, answer all of these:
 | messaging | broker-specific client only after contract, ordering, and retry needs are clear | thin clients or libraries that do not hide delivery semantics | frameworks that obscure ack, retry, DLQ, or partition behavior |
 | testing helpers | stdlib `testing` | `go-cmp`, `testify/require`, `goleak` where they clearly improve signal | assertion DSLs that obscure behavior |
 | release automation | simple scripts or CI | GoReleaser when matrix packaging becomes real work | heavyweight tooling nobody on the team understands |
+| binary linkage | pure-Go / `CGO_ENABLED=0` static | cgo ONLY with an ADR, after ruling out a pure-Go alternative | cgo pulled in transitively unnoticed |
 
 ## Common Mistakes And Forbidden Patterns
 
@@ -43,6 +44,7 @@ Before adding a dependency, answer all of these:
 - No tool dependency in runtime code when it belongs in a `go.mod` `tool` directive (managed with `go get -tool` and run with `go tool`).
 - No messaging library adopted before the repo documents idempotency, ordering, retry, and DLQ expectations.
 - No dependency added without the approval questions answered in writing and the `go.mod`/`go.sum` diff understood line by line.
+- No adopting a cgo-only library when a pure-Go one exists (e.g. `modernc.org/sqlite` over `mattn/go-sqlite3`); cgo forfeits `CGO_ENABLED=0` static builds and needs an ADR.
 - No exception to a default in this doc without an ADR recorded.
 
 ## Verification And Proof

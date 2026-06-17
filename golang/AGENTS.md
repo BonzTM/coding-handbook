@@ -41,6 +41,7 @@ Read this file first, then use [maintainer-map.md](maintainer-map.md) when you k
 - **Persistence**: default to `database/sql`; use `sqlc` when query count or complexity makes manual scanning noisy.
 - **Testing**: every behavior change needs tests. DB and external boundaries need real integration coverage, not only mocks.
 - **Observability**: new networked behavior adds logs, metrics, and health/readiness behavior where appropriate.
+- **Pure-Go default**: build with `CGO_ENABLED=0`; a cgo dependency requires an ADR.
 - **Dependency posture**: stdlib first, explicit rationale for every non-trivial dependency, no committed `replace` directives.
 
 ## Change Routing
