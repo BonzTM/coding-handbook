@@ -25,7 +25,10 @@ Review checklist for Go changes that affect behavior, boundaries, or operational
 ## Proof
 
 - [ ] Targeted tests prove the actual behavior change.
+- [ ] `make verify` is green: tidy, fmt-check, lint, vet, test, race, vuln, and build all pass.
+- [ ] `golangci-lint` passes via `make lint` (or as part of `make verify`) per [../quality/linting.md](../quality/linting.md), with no new `//nolint` that lacks a justification.
+- [ ] Coverage did not regress, and mandatory paths are exercised — domain core logic, error-to-status mapping, and request/message decode paths per [../quality/testing.md](../quality/testing.md).
 - [ ] `go test -race ./...` or an appropriately scoped race-safe equivalent passed.
-- [ ] `go vet ./...` and build verification passed for affected packages.
 - [ ] For DB or external boundaries, at least one real integration path was exercised.
 - [ ] For eventing changes, duplicate-delivery, retry, and terminal-failure behavior were actually exercised.
+- [ ] If the change ships a feature, it meets every gate in [feature-definition-of-done.md](feature-definition-of-done.md).

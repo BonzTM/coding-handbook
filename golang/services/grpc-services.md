@@ -23,7 +23,7 @@ internal/api/grpc/
 - Keep messages and services as small and explicit as possible.
 - Use `buf` or deterministic `protoc` invocations; do not rely on undocumented local generation steps.
 
-Proto package versioning is separate from release versioning for the repo. Keep versioned API packages like `v1` where they clarify compatibility, while release versions in changelogs and tags can follow plain `1.2.3` if that is the repo convention.
+Proto package versioning is separate from release versioning for the repo. Keep versioned API packages like `v1` where they clarify compatibility. Repo release tags still follow the canonical Go module form `v1.2.3` (the `v` prefix is required for module versions); only changelog or display strings may render the version without the `v`.
 
 ### Generated Code Policy
 

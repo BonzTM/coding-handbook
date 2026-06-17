@@ -13,10 +13,14 @@ Read this file first, then use [maintainer-map.md](maintainer-map.md) when you k
 
 - This file is the fast path. More detailed docs refine it; they do not weaken it.
 - Layout, module, and toolchain defaults live in [foundations/project-setup.md](foundations/project-setup.md).
-- Package and dependency boundaries live in [foundations/package-design.md](foundations/package-design.md) and [decisions/framework-selection.md](decisions/framework-selection.md).
-- Schema, API, and data-boundary rules live in [foundations/contracts-and-compatibility.md](foundations/contracts-and-compatibility.md).
+- Package and dependency boundaries live in [foundations/package-design.md](foundations/package-design.md) and [decisions/framework-selection.md](decisions/framework-selection.md); reusable shared packages (`internal/runtime`, `internal/telemetry`, `internal/httputil`, `internal/buildinfo`, `internal/testutil`) live in [foundations/shared-constructs.md](foundations/shared-constructs.md).
+- Schema, API, and data-boundary rules live in [foundations/contracts-and-compatibility.md](foundations/contracts-and-compatibility.md); type modeling in [foundations/data-modeling.md](foundations/data-modeling.md); the JSON/wire boundary in [foundations/serialization.md](foundations/serialization.md).
 - Runtime correctness rules live in [foundations/context-and-concurrency.md](foundations/context-and-concurrency.md), [foundations/errors-and-logging.md](foundations/errors-and-logging.md), and [foundations/configuration.md](foundations/configuration.md).
 - Proof expectations live in [quality/testing.md](quality/testing.md) and the relevant service or operations docs.
+- Lint policy lives in [quality/linting.md](quality/linting.md); time and clock discipline in [foundations/time.md](foundations/time.md); copy-paste scaffolding in [templates/](templates/).
+- Architecture decisions and their rationale live in [decisions/architecture-decision-records.md](decisions/architecture-decision-records.md); project ownership transfer in [onboarding-and-handoff.md](onboarding-and-handoff.md).
+- Shared vocabulary lives in [glossary.md](glossary.md); how to change this handbook lives in [CONTRIBUTING.md](CONTRIBUTING.md).
+- A complete, compiling worked example lives in [reference/exampleservice/](reference/exampleservice/) (`make verify`-green); mirror its structure for a new service rather than inventing one.
 
 ## Fast Path
 
@@ -29,7 +33,7 @@ Read this file first, then use [maintainer-map.md](maintainer-map.md) when you k
 ## Repo-Wide Invariants
 
 - **Single module**: start with one `go.mod` in the repo root. Nested modules require explicit architectural review.
-- **Official layout**: follow `cmd/` plus `internal/` per `go.dev/doc/modules/layout`. Use `pkg/` only for an intentionally public library surface.
+- **Official layout**: follow `cmd/` plus `internal/` per `go.dev/doc/modules/layout` (which prescribes that baseline and `internal/`, but does not define `pkg/`). Use `pkg/` only for an intentionally public library surface — a convention this handbook adopts, not part of the official layout doc.
 - **Thin main**: `main.go` wires config, logger, dependencies, signal handling, and shutdown. Business logic belongs in `internal/`.
 - **Context discipline**: `ctx context.Context` is the first parameter for I/O and long-running work. Never store it in a struct or use it as an optional bag of dependencies.
 - **Errors**: wrap with `%w`, inspect with `errors.Is` and `errors.As`, and log once at the boundary that can act.
@@ -58,6 +62,20 @@ Read this file first, then use [maintainer-map.md](maintainer-map.md) when you k
 | auth, secrets, file paths, supply chain | [operations/security.md](operations/security.md) |
 | CI, build, release, containers | [operations/ci-and-release.md](operations/ci-and-release.md) |
 | new dependency or framework choice | [decisions/framework-selection.md](decisions/framework-selection.md) |
+| lint rules, golangci-lint config, formatters | [quality/linting.md](quality/linting.md) |
+| time, clocks, timeouts, scheduling correctness | [foundations/time.md](foundations/time.md) |
+| enums, typed IDs, optional fields, zero values, slice/map modeling | [foundations/data-modeling.md](foundations/data-modeling.md) |
+| JSON tags, wire DTOs, encoding/decoding, `omitzero` | [foundations/serialization.md](foundations/serialization.md) |
+| a non-obvious or hard-to-reverse architecture decision | [decisions/architecture-decision-records.md](decisions/architecture-decision-records.md) |
+| taking over or handing off a project | [onboarding-and-handoff.md](onboarding-and-handoff.md) |
+| bootstrapping scaffolding (Makefile, CI, main, configs) | [templates/](templates/) |
+| retries, backoff, circuit breakers, rate limiting, load shedding | [operations/resilience.md](operations/resilience.md) |
+| containerization, Dockerfile, runtime limits, deployment | [operations/deployment.md](operations/deployment.md) |
+| SLOs, alerting posture, runbooks, on-call | [operations/operability.md](operations/operability.md) |
+| caching layers, invalidation, cache keys, stampede control | [services/caching.md](services/caching.md) |
+| feature flags, gating, rollout toggles | [foundations/configuration.md](foundations/configuration.md) (### Feature Flags) |
+| git workflow, branching, commits, CHANGELOG | [foundations/git-workflow.md](foundations/git-workflow.md) |
+| tagging and publishing a library or module version | [recipes/release-library-version.md](recipes/release-library-version.md) |
 
 ## Working Norms
 
@@ -74,12 +92,13 @@ Read this file first, then use [maintainer-map.md](maintainer-map.md) when you k
 |---|---|---|
 | format | `gofmt -s -l .` | no files listed |
 | static analysis | `go vet ./...` | exit code 0 |
-| type and compile safety | `go build -trimpath ./...` | exit code 0 |
+| lint | `go tool golangci-lint run` | exit code 0 (policy in [quality/linting.md](quality/linting.md)) |
+| type and compile safety | `go build ./...` | exit code 0 |
 | concurrency safety | `go test -race ./...` | all relevant packages pass |
-| supply-chain check | `govulncheck ./...` | no blocking findings |
+| supply-chain check | `go tool govulncheck ./...` | no blocking findings |
 | file-specific correctness | targeted tests from the relevant recipe or service doc | pass with expected assertions |
 
-Use broader tools such as `staticcheck`, containerized integration suites, fuzzing, or benchmark checks when the repo or task calls for them.
+The committed [templates/Makefile](templates/Makefile) wraps this full gate as `make verify`; run it so local and CI stay identical. `staticcheck` already runs inside `golangci-lint`. Use broader tools such as containerized integration suites, fuzzing, or benchmark checks when the repo or task calls for them.
 
 ## Slow Path Docs
 

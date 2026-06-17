@@ -58,6 +58,16 @@ Use a stable order so failures are observable and safe:
 4. access logging and metrics
 5. handler
 
+### List Endpoints And Pagination
+
+Every endpoint that returns a collection is paginated from the start — an unbounded list is a latency and memory incident waiting for the table to grow.
+
+- Default to keyset/cursor pagination (an opaque `next_cursor` over a stable sort key) for large or append-heavy sets; offset/limit is acceptable only for small, bounded, or admin lists where deep pages are rare.
+- Enforce a default and a maximum page size on the server; clamp an oversized request rather than rejecting it, and never honor an unbounded one.
+- Sort on a total, stable order (the cursor key plus a tiebreaker such as the primary key) so pages neither overlap nor skip rows under concurrent writes.
+- Return exact totals only when they are cheap; for large tables prefer a `has_more` flag or `next_cursor` over a full count.
+- Keep one consistent list envelope (an `items` array plus pagination metadata) across endpoints, and treat it as a wire contract per [serialization.md](../foundations/serialization.md).
+
 ## Common Mistakes And Forbidden Patterns
 
 - Handlers querying the database directly instead of going through core or repository seams.
@@ -66,6 +76,7 @@ Use a stable order so failures are observable and safe:
 - Returning transport-specific DTOs from core packages.
 - Changing public request or response shapes without compatibility review.
 - Treating readiness as "process is running" rather than "dependencies needed for traffic are ready".
+- Returning an unbounded or unpaginated collection, or deep offset pagination that scans the whole prefix of a large table.
 
 ## Verification And Proof
 

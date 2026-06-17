@@ -12,7 +12,6 @@ This handbook assumes a single Go module with a small public surface and a large
 repo/
   go.mod
   go.sum
-  tools.go
   cmd/
     app/
       main.go
@@ -29,7 +28,7 @@ repo/
   api/
 ```
 
-This follows the official module-layout guidance from `go.dev/doc/modules/layout`. Community project-layout repos may offer ideas, but they are not the primary authority and they should not override the simpler `cmd/` plus `internal/` baseline unless a real codebase need appears.
+This follows the official module-layout guidance from `go.dev/doc/modules/layout`. Community project-layout repos may offer ideas, but they are not the primary authority and they should not override the simpler `cmd/` plus `internal/` baseline unless a real codebase need appears. A complete, compiling instance of this architecture lives at [reference/exampleservice/](reference/exampleservice/) (`make verify`-green); read it alongside this map to see the boundaries embodied in real code.
 
 ## Two-Speed Documentation Model
 
@@ -48,6 +47,8 @@ Use the fast path for most tasks. Use this file when a change crosses layers, in
 | `internal/api/http` | handlers, encoding/decoding, HTTP status mapping, middleware composition | business rules, schema migrations |
 | `internal/api/grpc` | proto-to-core mapping, status codes, interceptors | SQL, domain state mutation outside core |
 | `internal/db` | SQL, repositories, transaction helpers, migrations, database-specific mapping | HTTP or gRPC concerns |
+| `internal/httputil` | JSON helpers, error-response helpers, request-size and timeout helpers shared across transport adapters | domain/business rules, handler-specific logic, a dumping ground for unrelated helpers |
+| `internal/buildinfo` | version, commit, and build-time metadata stamped via `-ldflags` and surfaced in logs and `version` output | runtime behavior, config loading, anything beyond build provenance |
 | `internal/config` | env and flag loading, defaults, validation, startup errors | lazy runtime lookups spread through the codebase |
 | `internal/telemetry` | logger setup, metrics registration, tracing helpers, health/readiness primitives | domain decisions about what a request means |
 | `internal/runtime` | application assembly helpers that keep `main` thin | transport or persistence logic |

@@ -1,0 +1,47 @@
+# Dependency-update automation. The handbook DEFAULT is Dependabot: it is
+# GitHub-native and pairs with the committed CI workflow, so every bot PR runs
+# the SAME `make verify` gate before it can merge.
+# Contract and cadence: ../operations/ci-and-release.md#dependency-updates
+# Reviewing/merging a bot PR by hand: ../recipes/bump-dependency.md
+#
+# NOT on GitHub, or you need cross-repo grouping, custom managers, or finer
+# scheduling? Use Renovate instead — it is the supported alternative and covers
+# the same Go-module + Actions surface with a richer config model.
+#
+# Destination: .github/dependabot.yml
+
+version: 2
+updates:
+  # Go module dependencies (go.mod / go.sum at the module root).
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      # One PR for the routine, low-risk churn. Majors stay ungrouped so each
+      # one gets its own PR, changelog read, and rationale (see the recipe).
+      gomod-minor-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions used by the committed CI/release workflows.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(ci)"
+      include: "scope"
+    groups:
+      actions-minor-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"

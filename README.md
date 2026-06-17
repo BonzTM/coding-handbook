@@ -13,3 +13,4 @@ This repository is a centralized engineering handbook for language- and stack-sp
 - `golang/` - production-oriented guidance for new Go services, workers, CLIs, and libraries
 
 All detailed guidance lives inside the language-specific handbook directories. The repo root stays intentionally thin so it can route cleanly as more handbooks are added later.
+

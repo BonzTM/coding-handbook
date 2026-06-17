@@ -26,21 +26,37 @@ Before adding a dependency, answer all of these:
 | metrics | Prometheus client | org-mandated backend SDKs | high-level wrappers that hide metric names and labels |
 | tracing | OpenTelemetry | none if the repo is local-only and simple | ad hoc trace systems |
 | persistence | `database/sql`, then `sqlc` | small query builders when they stay transparent | ORMs as the day-one default |
+| schema migrations | `goose` (SQL-first, embeddable via `embed.FS`, runs from code or CLI; pairs with `database/sql` + `sqlc`) | `golang-migrate` for many drivers, `atlas` for declarative/diff-based schemas (ADR-level) | hand-applied SQL with no migration tool or version table |
+| job scheduling | stdlib `time.Ticker` for fixed intervals | a cron-expression library (e.g. `robfig/cron`) only for calendar schedules; advisory-lock or leader election for multi-replica | unmanaged goroutines with `time.Sleep` loops and no overlap guard |
+| API deprecation signaling | `Sunset` header (RFC 8594) plus a documented `Deprecation` header form, recorded in an ADR | an org-standard deprecation registry or policy | removing a contract with no deprecation signal or window |
+| in-process caching | a bounded LRU/TTL cache (e.g. `hashicorp/golang-lru/v2`) plus `golang.org/x/sync/singleflight` to collapse duplicate loads | an external cache (Redis/memcached) only when the working set or cross-instance sharing demands it | unbounded in-memory maps used as caches |
+| feature flags | static typed config in `internal/config` | a typed accessor over an atomic snapshot for runtime toggles | a managed flag/experimentation service before targeting genuinely needs it; scattered raw env lookups; long-lived flags left as debt |
 | messaging | broker-specific client only after contract, ordering, and retry needs are clear | thin clients or libraries that do not hide delivery semantics | frameworks that obscure ack, retry, DLQ, or partition behavior |
 | testing helpers | stdlib `testing` | `go-cmp`, `testify/require`, `goleak` where they clearly improve signal | assertion DSLs that obscure behavior |
 | release automation | simple scripts or CI | GoReleaser when matrix packaging becomes real work | heavyweight tooling nobody on the team understands |
 
-## Hard Warnings
+## Common Mistakes And Forbidden Patterns
 
 - No committed `replace` directives for production builds.
 - No dependency added only because it is familiar from another language ecosystem.
 - No ORM, DI container, or web framework just to avoid writing explicit Go code.
-- No tool dependency in runtime code when it belongs in `tools.go`.
+- No tool dependency in runtime code when it belongs in a `go.mod` `tool` directive (managed with `go get -tool` and run with `go tool`).
 - No messaging library adopted before the repo documents idempotency, ordering, retry, and DLQ expectations.
+- No dependency added without the approval questions answered in writing and the `go.mod`/`go.sum` diff understood line by line.
+- No exception to a default in this doc without an ADR recorded.
 
-## Decision Record
+## Verification And Proof
 
-When a repo chooses an exception, write down:
+A dependency choice is proven, not asserted. Before a dependency lands, demonstrate all of:
+
+- The Approval Questions above are answered in writing, in the PR description or the ADR — not left implicit.
+- The `go.mod` and `go.sum` diff is reviewed and understood: every added direct and indirect module is accounted for, and the size of the transitive blast radius is acceptable.
+- `go tool govulncheck ./...` is clean against the new dependency set (this is part of `make verify`).
+- An ADR is recorded for any choice that departs from the Default Choices By Concern table, cross-linking [architecture-decision-records.md](architecture-decision-records.md).
+
+### Decision Record
+
+When a repo chooses an exception, the ADR (see [architecture-decision-records.md](architecture-decision-records.md)) must write down:
 
 - the package name and why the default was insufficient
 - which repo area is allowed to depend on it
