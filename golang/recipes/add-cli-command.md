@@ -26,6 +26,6 @@ Use this when a repo-owned binary gains a new subcommand or user-visible flag se
 ## Proof
 
 - command parsing tests
-- `go build -trimpath ./cmd/...`
+- `go build ./cmd/...`
 - local `--help` smoke test
 - one success and one failure-path execution against the built binary

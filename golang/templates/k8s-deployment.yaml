@@ -1,0 +1,149 @@
+# Kubernetes manifests for a handbook HTTP+Postgres service. Contract:
+# ../operations/deployment.md — this file is the concrete rollout the
+# "Container Runtime Limits", "Health Probes", and "Graceful Shutdown And
+# Termination" sections describe. Where the prose and this file disagree, the
+# prose wins; keep them in sync.
+#
+# Destination: k8s/ (one file per logical object is also fine; kept together
+# here so the deploy unit reads top to bottom).
+#
+# Replace: ghcr.io/org/repo image + tag, the namespace, the DB_DSN Secret name,
+# and the resource numbers (sized from your load tests, not copied blindly).
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: exampleservice
+  labels:
+    app.kubernetes.io/name: exampleservice
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: exampleservice
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: exampleservice
+    spec:
+      # Application shutdown grace (SHUTDOWN_GRACE, default 15s) must stay UNDER
+      # this platform grace, or the kubelet sends SIGKILL mid-drain. Budget:
+      # readiness flips not-ready, the LB stops routing, in-flight finishes,
+      # THEN the process exits — all inside these 30s. See deployment.md
+      # (Graceful Shutdown And Termination).
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        # Pod-level nonroot stance. The image already ships USER nonroot (65532);
+        # these make the platform enforce it regardless of the image.
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: exampleservice
+          # Pin to an immutable tag (release tag + SHA), never :latest, so a
+          # rollback is reproducible (deployment.md, Image Identity).
+          image: ghcr.io/org/repo:v1.2.3
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          # Right-size the Go runtime to the cgroup limits below. Both are
+          # REQUIRED by deployment.md (Container Runtime Limits), not optional.
+          env:
+            # GOMEMLIMIT: soft ceiling BELOW the memory limit (~90% of 512Mi ≈
+            # 460MiB) so the GC works harder before the kernel OOM-kills. Set as
+            # a literal that tracks the limit below; bump both together. (The
+            # downward API cannot express "90% of the limit", so this is the
+            # one value kept in sync by hand.)
+            - name: GOMEMLIMIT
+              value: "460MiB"
+            # GOMAXPROCS: match the integer CPU LIMIT via the downward API so a
+            # 1-core quota on a big node does not default to the host core count
+            # and throttle. (Alternatively import an automaxprocs-style library;
+            # the requirement — GOMAXPROCS == quota — is the same either way.)
+            - name: GOMAXPROCS
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.cpu
+                  divisor: "1"
+            # DB_DSN is injected from the platform secret store at RUNTIME, never
+            # baked into the image (deployment.md, Secrets And Config Injection).
+            - name: DB_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: exampleservice-db
+                  key: dsn
+            - name: LOG_JSON
+              value: "true"
+          resources:
+            # Requests = steady-state; limits = ceiling. GOMEMLIMIT/GOMAXPROCS
+            # above are derived from these limits.
+            requests:
+              cpu: "500m"
+              memory: "256Mi"
+            limits:
+              cpu: "1"
+              memory: "512Mi"
+          # Liveness: process-up ONLY. Must not check downstreams, or a database
+          # blip becomes a restart loop (deployment.md, Health Probes).
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          # Readiness: dependency-aware. A pod whose database is unreachable is
+          # pulled from rotation instead of serving errors.
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: exampleservice
+  labels:
+    app.kubernetes.io/name: exampleservice
+spec:
+  selector:
+    app.kubernetes.io/name: exampleservice
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+# Horizontal scaling on CPU. Tune the target and bounds from load/soak numbers
+# (quality/testing.md, Load And Soak Testing), not by reflex.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: exampleservice
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: exampleservice
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

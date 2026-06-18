@@ -1,0 +1,28 @@
+# Build output and binaries
+/bin
+/out
+/dist
+*.exe
+examplegrpc
+
+# Local tool binaries (buf codegen plugins installed by `make tools`)
+.tools
+
+# Test and coverage artifacts
+*.test
+cover.out
+coverage.out
+coverage.html
+*.prof
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Editor/IDE cruft
+.idea
+.vscode
+*.swp
+.DS_Store

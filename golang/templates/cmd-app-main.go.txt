@@ -1,0 +1,154 @@
+// Command app is the service entrypoint. Destination: cmd/<app>/main.go.
+//
+// Contract: main does nothing but wire process lifecycle. All fallible work
+// lives in run so it can return an error and so tests can exercise startup.
+// The root context is cancelled on SIGINT/SIGTERM; everything downstream
+// stops by observing that single cancellation. Shutdown is ordered and
+// bounded: stop accepting traffic, drain in-flight requests, then release
+// resources in reverse dependency order.
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"golang.org/x/sync/errgroup"
+
+	"github.com/org/repo/internal/api/http/server"
+	"github.com/org/repo/internal/buildinfo"
+	"github.com/org/repo/internal/config"
+	"github.com/org/repo/internal/core"
+	"github.com/org/repo/internal/db"
+	"github.com/org/repo/internal/telemetry"
+)
+
+func main() {
+	// One root context for the whole process. Cancelled on the first signal;
+	// stop() restores default signal handling so a second signal kills hard.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	if err := run(ctx); err != nil {
+		// Boundary log: errors are wrapped with %w on the way up and logged
+		// exactly once, here, before the process exits non-zero.
+		slog.Error("startup failed", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run(ctx context.Context) error {
+	// Fail fast: a malformed or incomplete config must abort before we open
+	// listeners or external connections. config.Load validates fully.
+	cfg, err := config.Load()
+	if err != nil {
+		return fmt.Errorf("load config: %w", err)
+	}
+
+	// Logger is built once and threaded explicitly; no global logger in
+	// reusable packages. Level comes from config so operators can turn up
+	// verbosity without a redeploy of code.
+	logger := newLogger(cfg)
+	logger.Info("starting",
+		"service", buildinfo.Name,
+		"version", buildinfo.Version,
+		"commit", buildinfo.Commit,
+	)
+
+	// Telemetry (metrics + tracing) before anything that emits it. Returns a
+	// flush so buffered spans/metrics survive shutdown.
+	tel, err := telemetry.Init(ctx, cfg.Telemetry)
+	if err != nil {
+		return fmt.Errorf("init telemetry: %w", err)
+	}
+
+	// DB pool is opened and ping-verified by the constructor; a service that
+	// cannot reach its store should not report ready.
+	pool, err := db.Open(ctx, cfg.Database)
+	if err != nil {
+		return fmt.Errorf("open database: %w", err)
+	}
+
+	// Explicit constructor wiring. The dependency graph is readable top to
+	// bottom: store -> core service -> HTTP server. No magic container.
+	store := db.NewStore(pool)
+	svc := core.NewService(store, logger, tel.Meter())
+	srv := server.New(cfg.HTTP, svc, logger, tel)
+
+	// errgroup bound to the root context: if any member returns, gctx is
+	// cancelled and siblings observe it. g.Wait reports the first error.
+	g, gctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		logger.Info("http listening", "addr", cfg.HTTP.Addr)
+		// ErrServerClosed is the expected outcome of a clean Shutdown; treat
+		// only an unexpected listen failure as an error.
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return fmt.Errorf("http serve: %w", err)
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		// Shutdown supervisor. Blocks until the root context (signal) or a
+		// sibling failure cancels gctx, then drives ordered teardown.
+		<-gctx.Done()
+		return shutdown(srv, pool, tel, logger, cfg.ShutdownGrace)
+	})
+
+	if err := g.Wait(); err != nil {
+		return fmt.Errorf("run: %w", err)
+	}
+	logger.Info("stopped")
+	return nil
+}
+
+// shutdown drains and releases resources in reverse dependency order under a
+// bounded grace budget. Order matters: stop new traffic, drain in-flight work,
+// then close the store those requests used, then flush telemetry last so the
+// teardown itself is observable.
+func shutdown(srv *server.Server, pool *db.Pool, tel *telemetry.Telemetry, logger *slog.Logger, grace time.Duration) error {
+	logger.Info("shutting down", "grace", grace)
+
+	// Detach from the cancelled root context: shutdown gets its own deadline.
+	ctx, cancel := context.WithTimeout(context.Background(), grace)
+	defer cancel()
+
+	// 1. Flip readiness to unready so load balancers stop routing new traffic
+	//    while existing requests drain.
+	srv.SetReady(false)
+
+	// 2. Stop accepting connections and wait for in-flight requests to finish,
+	//    bounded by the grace deadline.
+	if err := srv.Shutdown(ctx); err != nil {
+		return fmt.Errorf("http shutdown: %w", err)
+	}
+
+	// 3. Close the DB pool now that no request can still be using it.
+	pool.Close()
+
+	// 4. Flush telemetry last so the steps above were recorded.
+	if err := tel.Flush(ctx); err != nil {
+		return fmt.Errorf("flush telemetry: %w", err)
+	}
+	return nil
+}
+
+// newLogger builds the single structured logger for the process. JSON for
+// machine-collected environments, text for local development.
+func newLogger(cfg config.Config) *slog.Logger {
+	opts := &slog.HandlerOptions{Level: cfg.LogLevel}
+	var h slog.Handler
+	if cfg.LogJSON {
+		h = slog.NewJSONHandler(os.Stdout, opts)
+	} else {
+		h = slog.NewTextHandler(os.Stdout, opts)
+	}
+	return slog.New(h)
+}

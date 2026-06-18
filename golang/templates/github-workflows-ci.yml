@@ -1,0 +1,72 @@
+# CI gate. The single source of truth is the committed Makefile: this workflow
+# is a thin caller that runs the SAME `make verify` you run locally.
+# Contract and target details: ../operations/ci-and-release.md
+#
+# NOT on GitHub? Replicate the one meaningful step (`make verify`) in your CI of
+# choice (GitLab CI, Buildkite, etc.). The Makefile is the portable contract;
+# everything below is just GitHub-specific plumbing around it.
+#
+# Destination: .github/workflows/ci.yml
+
+name: ci
+
+on:
+  push:
+    branches: [main] # default branch only; PR builds cover the rest
+  pull_request:
+
+# Least privilege. Read source; grant nothing else. Add scopes per-job only when
+# a job genuinely needs them (e.g. release publishing).
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod # single source of truth for the Go version
+          cache: true # build + module cache, keyed off go.sum
+      - run: make verify # the entire gate: tidy/fmt-check/lint/vet/test/race/vuln/build
+
+  # Second gate: prove the real SQL path, not just the offline in-memory store.
+  # 'verify' above is the OFFLINE gate (no network, no DB) and stays the
+  # required check. This job spins up a real Postgres service container and runs
+  # the //go:build integration tests against it, so the database path the
+  # service ships is exercised in CI instead of only at deploy time.
+  #
+  # NOT on GitHub? The portable contract is "run `go test -tags=integration ./...`
+  # with TEST_DATABASE_DSN pointing at a throwaway Postgres". Replicate that in
+  # your CI of choice; everything else below is GitHub-specific plumbing.
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: exampleservice
+        ports:
+          - 5432:5432
+        # Hold the job's steps until Postgres answers, so tests never race a
+        # database that is still initializing.
+        options: >-
+          --health-cmd "pg_isready -U app -d exampleservice"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      # The integration suite reads TEST_DATABASE_DSN and skips when it is unset
+      # (see internal/db/postgres_integration_test.go); here it is always set, so
+      # the SQL path is proven. The embedded goose migrations create the schema.
+      - run: go test -tags=integration ./...
+        env:
+          TEST_DATABASE_DSN: "postgres://app:app@localhost:5432/exampleservice?sslmode=disable"

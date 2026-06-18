@@ -1,0 +1,13 @@
+// Go workspace file so editors (gopls) resolve the handbook's nested,
+// buildable Go modules without opening each one as a separate workspace root.
+//
+// This repository is a multi-language engineering handbook; the root stays
+// intentionally thin. Non-Go tooling ignores this file. As more buildable Go
+// reference modules are added under golang/, list them in the `use` block.
+go 1.26.4
+
+use (
+	./golang/reference/examplegrpc
+	./golang/reference/exampleservice
+	./golang/reference/exampleworker
+)

@@ -1,0 +1,38 @@
+# Keep the build context minimal: only what `go build` needs.
+
+# VCS
+.git
+.gitignore
+.github
+
+# Local environment and secrets — never enter the image build.
+.env
+.env.*
+*.local
+
+# Local tool binaries (buf codegen plugins) and build output
+.tools
+/bin
+/out
+/dist
+*.exe
+
+# Test and coverage artifacts
+*.test
+cover.out
+coverage.out
+coverage.html
+*.prof
+
+# Containers / compose / the Dockerfile itself
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Docs and editor/IDE cruft not needed to compile
+docs
+*.md
+.idea
+.vscode
+*.swp
+.DS_Store

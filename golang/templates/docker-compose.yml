@@ -1,0 +1,76 @@
+# Local stack for a handbook HTTP+Postgres service: the service plus the one
+# dependency it cannot run without. Contract: ../operations/deployment.md
+# (the same image, probes, runtime limits, and config keys live there).
+#
+# Destination: docker-compose.yml (repo root).
+#
+# This is the copyable LOCAL stack, not a production manifest — the production
+# rollout (resource limits, secret store, probes, HPA) lives in the committed
+# k8s-deployment.yaml. Compose wires the service to a real Postgres so the SQL
+# path (and the //go:build integration tests) can be exercised the way CI does.
+#
+# Bring it up:   docker compose up --build
+# Tear it down:  docker compose down -v   (the -v drops the Postgres volume)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      # These three seed the database on first boot; the service reads the
+      # composed DSN below, not these, so keep them in sync by hand.
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: exampleservice
+    ports:
+      # Exposed for local psql / the integration suite's TEST_DATABASE_DSN.
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # depends_on: service_healthy below blocks the service until this passes,
+      # so the app never races a database that is still initializing.
+      test: ["CMD-SHELL", "pg_isready -U app -d exampleservice"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  service:
+    build:
+      context: .
+      # Stamp build metadata the same way the Dockerfile/CI does.
+      args:
+        APP: app
+        VERSION: dev
+        COMMIT: local
+    depends_on:
+      postgres:
+        # Wait for the healthcheck, not just container start.
+        condition: service_healthy
+    environment:
+      # The one dependency wiring: point the service at the compose Postgres.
+      # Matches the DatabaseConfig DSN key in internal/config; sslmode=disable
+      # because this is an in-network plaintext dev link, never production.
+      DB_DSN: "postgres://app:app@postgres:5432/exampleservice?sslmode=disable"
+      # Single-instance local stack: let the service apply the embedded goose
+      # migrations on boot so the schema exists without a separate step. In
+      # production migrations are a separate gated deploy (see deployment.md).
+      DB_MIGRATE_ON_STARTUP: "true"
+      # Pool sizing mirrors the config defaults; override here if you tune them.
+      DB_MAX_OPEN_CONNS: "25"
+      DB_MAX_IDLE_CONNS: "25"
+      # Human-readable text logs for the local inner loop (JSON in production).
+      LOG_LEVEL: debug
+      LOG_JSON: "false"
+      HTTP_ADDR: ":8080"
+    ports:
+      - "8080:8080"
+    # No compose healthcheck on the service itself: the distroless runtime image
+    # has no shell, curl, or wget to probe /readyz with, and the service ships no
+    # health-check subcommand. The real readiness gate is the Kubernetes
+    # readiness probe in k8s-deployment.yaml (httpGet /readyz); locally just hit
+    # GET http://localhost:8080/readyz yourself. Postgres carries the only
+    # healthcheck here because the service's depends_on needs it.
+
+volumes:
+  pgdata:

@@ -13,7 +13,7 @@ Release checklist for Go artifacts that should be traceable, reproducible enough
 
 - [ ] Build uses `-trimpath` and the intended VCS metadata policy.
 - [ ] Binaries or containers report correct version/build info.
-- [ ] Release versioning follows plain `1.2.3` form, not `v1.2.3`, if the repo uses semantic versions.
+- [ ] VCS release tags use the canonical `v1.2.3` form (the `v` prefix is required for Go module versions); a changelog or display string may drop the `v`, but the tag must not.
 - [ ] If `default.pgo` is used, it came from representative profiles and is still current.
 - [ ] Container images are built with a reviewed multi-stage flow when containers are part of the release.
 
