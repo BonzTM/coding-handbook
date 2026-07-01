@@ -1,6 +1,6 @@
 # Checklists
 
-Executable gates for the moments where missing a step is expensive: starting a repo, reviewing a PR, cutting a release, handing off ownership, responding to an incident, rolling out, upgrading a dependency, and closing out a feature or security review. Each checklist is a grouped set of `- [ ]` items plus a Verification section; run it top to bottom and do not skip items.
+Executable gates for the moments where missing a step is expensive: starting a repo, reviewing a PR, cutting a release, handing off ownership, responding to an incident, rolling out, upgrading a dependency, and closing out a feature or security review. Each checklist is a grouped set of `- [ ]` items plus a closing Verification (or Proof) section; run it top to bottom and do not skip items.
 
 For routing a change to its related obligations, see [../maintainer-map.md](../maintainer-map.md). For the handbook overview, see [../README.md](../README.md).
 

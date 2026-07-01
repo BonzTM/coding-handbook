@@ -70,7 +70,7 @@ func testDeps() Deps {
 func newTestServerWithDeps(t *testing.T, ready bool, deps Deps) *Server {
 	t.Helper()
 	svc := core.NewService(db.NewMemory(), fixedClock{t: time.Unix(1700000000, 0).UTC()})
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	cfg := config.HTTPConfig{
 		Addr:              ":0",
 		ReadHeaderTimeout: time.Second,
@@ -213,7 +213,7 @@ func TestListWidgetsPaginationWalk(t *testing.T) {
 
 	var got []string
 	cursor := ""
-	for page := 0; page < len(ids)+1; page++ {
+	for page := range len(ids) + 1 {
 		path := "/widgets?page_size=2"
 		if cursor != "" {
 			path += "&cursor=" + url.QueryEscape(cursor)

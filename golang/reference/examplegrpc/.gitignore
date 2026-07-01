@@ -3,7 +3,9 @@
 /out
 /dist
 *.exe
-examplegrpc
+# The built binary at the module root only: a bare "examplegrpc" pattern
+# would also ignore the cmd/examplegrpc source directory.
+/examplegrpc
 
 # Local tool binaries (buf codegen plugins installed by `make tools`)
 .tools

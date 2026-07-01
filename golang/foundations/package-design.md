@@ -32,6 +32,7 @@ Reach for type parameters only for type-safe **containers** and **algorithms** t
 - Do not add type parameters speculatively, and never to force-fit a single concrete type — that is an indirection tax with no payoff. Write the concrete version; generalize on the second real caller.
 - Constrain to the minimum: `cmp.Ordered` for things you compare/sort, `comparable` for map keys, a small named `interface` constraint for everything else. Define a custom constraint when the operation set is domain-specific rather than reusing a vague `any`.
 - Overly generic APIs hurt readability more than the duplication they remove. If the signature needs a paragraph to explain, prefer two concrete functions. See [data-modeling.md](./data-modeling.md) for choosing the underlying types these operate on.
+- Iterators: default to returning slices. Expose `iter.Seq`/`iter.Seq2` (range-over-func, Go 1.23+) only for genuinely streaming, unbounded, or lazy sequences where materializing a slice is wrong. Do not convert existing slice-returning APIs to iterators.
 
 ### Functional Options
 
@@ -65,6 +66,12 @@ func NewServer(addr string, opts ...Option) *Server {
 - Package names should be short, lower-case, and descriptive: `auth`, `config`, `orders`, `telemetry`.
 - Avoid stutter: prefer `orders.Service`, not `orders.OrderService`.
 - Avoid packages named after mechanics rather than purpose: `util`, `helpers`, `common`, `base`, and `misc` are red flags.
+
+### File Organization
+
+- Split files by responsibility, not by type kind — no `interfaces.go`, `types.go`, or `models.go` junk drawers. Each file holds one coherent concern, and stays under a few hundred lines before it is split.
+- Domain types pair `<type>.go` with `<type>_test.go` (`widget.go` / `widget_test.go`).
+- The canonical transport-package layout is the reference's: `server.go` (construction and route wiring), `handlers.go`, `middleware.go`, `errors.go` (status mapping), as [../reference/exampleservice/](../reference/exampleservice/) `internal/api/http` does. Cross-cutting concerns that outgrow `middleware.go` get their own file (`auth.go`, `idempotency.go`), same rule.
 
 ## Common Mistakes And Forbidden Patterns
 

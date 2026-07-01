@@ -51,8 +51,8 @@ test: ## Run all tests.
 race: ## Run all tests under the race detector.
 	go test -race ./...
 
-cover: ## Write cover.out and print total coverage.
-	go test -coverprofile=cover.out ./...
+cover: ## Write cover.out and print total coverage (atomic mode is race-safe).
+	go test -covermode=atomic -coverprofile=cover.out ./...
 	go tool cover -func=cover.out | grep '^total:'
 
 vuln: ## Run govulncheck against the module.

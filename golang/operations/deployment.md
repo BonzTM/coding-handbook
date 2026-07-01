@@ -57,7 +57,7 @@ Secrets and environment-specific config reach the container at RUNTIME from the 
 ### Graceful Shutdown And Termination
 
 - On `SIGTERM` the process drains in-flight work within a bounded grace period — see [foundations/context-and-concurrency.md](../foundations/context-and-concurrency.md#graceful-shutdown-and-draining).
-- The application's shutdown grace period must **exceed** the platform's termination grace period (e.g. Kubernetes `terminationGracePeriodSeconds`), or the platform sends `SIGKILL` mid-drain. Budget: readiness flips to not-ready, the load balancer stops routing, in-flight requests finish, *then* the process exits — all inside the platform grace.
+- The application's shutdown grace period must stay **under** the platform's termination grace period (e.g. Kubernetes `terminationGracePeriodSeconds`): platform grace = app grace + any `preStop` delay + headroom. If the app grace meets or exceeds the platform's, the platform sends `SIGKILL` mid-drain. Budget: readiness flips to not-ready, the load balancer stops routing, in-flight requests finish, *then* the process exits — all inside the platform grace.
 - Pair shutdown with retry/timeout discipline at clients so a rolling deploy does not surface as user-visible errors (see [operations/resilience.md](resilience.md)).
 
 ### Orchestration
@@ -65,9 +65,13 @@ Secrets and environment-specific config reach the container at RUNTIME from the 
 The probes, runtime limits, and grace-period budget above are not just prose — they are committed, copyable manifests under [`golang/templates/`](../templates/README.md):
 
 - [`docker-compose.yml`](../templates/docker-compose.yml) — the local stack: the service plus a `postgres:16-alpine` with a healthcheck and `depends_on: service_healthy`, wiring `DB_DSN` and the config keys so the SQL path runs the same way CI's integration job does ([ci-and-release.md](ci-and-release.md)).
-- [`k8s-deployment.yaml`](../templates/k8s-deployment.yaml) — the production rollout: a nonroot Deployment with resource requests/limits, `GOMEMLIMIT`/`GOMAXPROCS` derived from those limits, `/livez` liveness + `/readyz` readiness probes, `terminationGracePeriodSeconds` above the app shutdown grace, a `DB_DSN` secret, a Service, and an HPA.
+- [`k8s-deployment.yaml`](../templates/k8s-deployment.yaml) — the production rollout: a nonroot Deployment with resource requests/limits, `GOMEMLIMIT`/`GOMAXPROCS` derived from those limits, `/livez` liveness + `/readyz` readiness probes, `terminationGracePeriodSeconds` above the app shutdown grace, a `DB_DSN` secret, a Service, an HPA, and a migration Job (below).
 
 Copy them and adjust the image, namespace, secret name, and resource numbers; this doc is the contract they implement, so do not restate it in the manifests.
+
+### Production Migrations
+
+The "CI-apply before traffic" default from [services/database.md](../services/database.md) has a concrete mechanism: the deploy pipeline runs a **migration Job** — the same app image invoked with the `-migrate` flag, which applies the embedded goose migrations and exits — and waits for it to complete before rolling the Deployment. The k8s template ships this Job as its second document, and [reference/exampleservice](../reference/exampleservice/) implements the flag. One writer applies the schema change; the new pods only start against a schema that is already in place. `DB_MIGRATE_ON_STARTUP=true` remains a dev/single-writer convenience only — never the production path, where concurrent replicas would race to apply.
 
 ## Common Mistakes And Forbidden Patterns
 
@@ -79,7 +83,7 @@ Copy them and adjust the image, namespace, secret name, and resource numbers; th
 - No `GOMEMLIMIT`, so the process OOM-kills under load instead of GC'ing harder; or `GOMEMLIMIT` set at or above the container limit, which defeats the purpose.
 - Leaving `GOMAXPROCS` at the host core count under a fractional/limited CPU quota, causing throttling and tail-latency spikes.
 - Liveness probe that checks downstream dependencies, turning a dependency blip into a restart loop.
-- Application shutdown grace shorter than the platform termination grace, so drains are cut off by `SIGKILL`.
+- Application shutdown grace at or above the platform termination grace (no headroom for the preStop delay and exit), so the platform cuts the drain off with `SIGKILL`.
 
 ## Verification And Proof
 

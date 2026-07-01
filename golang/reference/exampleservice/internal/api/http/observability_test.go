@@ -107,7 +107,7 @@ func TestAccessLogIncludesTraceID(t *testing.T) {
 		Route   string `json:"route"`
 	}
 	// The access log line has msg="request"; decode the matching JSON object.
-	for _, raw := range strings.Split(strings.TrimSpace(buf.String()), "\n") {
+	for raw := range strings.SplitSeq(strings.TrimSpace(buf.String()), "\n") {
 		var probe struct {
 			Msg string `json:"msg"`
 		}

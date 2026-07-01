@@ -39,4 +39,4 @@ Use this when a feature adds or changes one RPC on a gRPC service.
 - `grpcurl -plaintext -d '{...}' localhost:<port> <svc>.v<N>.<Service>/<Method>` smoke call against a local server
 - `make verify`
 
-Governing doc: [grpc-services.md](../services/grpc-services.md). The HTTP analog is [add-http-endpoint.md](add-http-endpoint.md). If the method calls another service, see [add-external-client.md](add-external-client.md). To retire an RPC or field, see [deprecate-and-remove-contract.md](deprecate-and-remove-contract.md).
+Governing doc: [grpc-services.md](../services/grpc-services.md). The compiling exemplar is [`reference/examplegrpc/`](../reference/examplegrpc/): [`internal/api/grpc/server.go`](../reference/examplegrpc/internal/api/grpc/server.go) shows the thin server method of step 4 and [`errors.go`](../reference/examplegrpc/internal/api/grpc/errors.go) the domain-to-`codes.*` mapping. The HTTP analog is [add-http-endpoint.md](add-http-endpoint.md). If the method calls another service, see [add-external-client.md](add-external-client.md). To retire an RPC or field, see [deprecate-and-remove-contract.md](deprecate-and-remove-contract.md).

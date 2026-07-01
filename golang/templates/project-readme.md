@@ -40,13 +40,12 @@ to `.env.example` alongside any change to this table.
 
 | Key | Type | Required | Default | Secret | Description |
 |---|---|---|---|---|---|
-| `<APP>_ENV` | string | yes | `development` | no | Deployment environment: `development`, `staging`, `production`. |
-| `<APP>_LOG_LEVEL` | string | no | `info` | no | `slog` level: `debug`, `info`, `warn`, `error`. |
-| `<APP>_HTTP_ADDR` | string | no | `:8080` | no | Listen address for the HTTP server. |
-| `<APP>_HTTP_READ_TIMEOUT` | duration | no | `5s` | no | Maximum duration for reading a request. |
-| `<APP>_SHUTDOWN_GRACE` | duration | no | `15s` | no | Grace period for in-flight work during shutdown (maps to `cfg.ShutdownGrace`). |
-| `<APP>_DATABASE_URL` | string | yes | — | yes | DSN for the primary database. |
-| `<APP>_DATABASE_MAX_CONNS` | int | no | `10` | no | Maximum open connections in the pool. |
+| `LOG_LEVEL` | string | no | `info` | no | `slog` level: `debug`, `info`, `warn`, `error`. |
+| `HTTP_ADDR` | string | no | `:8080` | no | Listen address for the HTTP server. |
+| `HTTP_READ_TIMEOUT` | duration | no | `15s` | no | Maximum duration for reading a request, including the body. |
+| `SHUTDOWN_GRACE` | duration | no | `15s` | no | Grace period for in-flight work during shutdown (maps to `cfg.ShutdownGrace`). |
+| `DB_DSN` | string | yes | — | yes | DSN for the primary database. |
+| `DB_MAX_OPEN_CONNS` | int | no | `25` | no | Maximum open connections in the pool. |
 | `<KEY>` | `<type>` | `<yes/no>` | `<default>` | `<yes/no>` | `<what it controls; describe failure mode if unset>` |
 
 ## Architecture

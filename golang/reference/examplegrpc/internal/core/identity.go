@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"errors"
+	"slices"
 )
 
 // Identity sentinel errors the transport boundary branches on with errors.Is.
@@ -49,12 +50,7 @@ type Principal struct {
 
 // HasRole reports whether the principal carries the given role.
 func (p Principal) HasRole(want Role) bool {
-	for _, r := range p.Roles {
-		if r == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(p.Roles, want)
 }
 
 // principalCtxKey is an unexported context key type so principal values cannot

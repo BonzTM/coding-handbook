@@ -11,13 +11,16 @@ Persistence defaults for repos that want visible SQL, explicit transactions, and
 ### Suggested Layout
 
 ```text
-internal/db/
-  migrations/
-  queries/
-  repository.go
-  tx.go
-  sqlc.yaml          # if the repo uses sqlc
+repo/
+  sqlc.yaml          # module root, if the repo uses sqlc
+  internal/db/
+    migrations/
+    queries.sql      # split into a queries/ directory as it grows
+    repository.go
+    tx.go
 ```
+
+`sqlc.yaml` lives at the module root (where `go tool sqlc generate` runs) and points at `internal/db` for both schema and queries — [reference/exampleservice/sqlc.yaml](../reference/exampleservice/sqlc.yaml) is the exemplar. Start with a single `queries.sql`; split it into `internal/db/queries/*.sql` only when it grows enough to earn the directory.
 
 ### Connection Pool Sizing
 

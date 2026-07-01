@@ -1,7 +1,6 @@
 package http
 
 import (
-	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -48,7 +47,7 @@ func (m *countingMetrics) requestCount() int {
 func TestProbesNotAccessLoggedOrMetered(t *testing.T) {
 	metrics := &countingMetrics{}
 	svc := core.NewService(db.NewMemory(), fixedClock{t: time.Unix(1700000000, 0).UTC()})
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	cfg := config.HTTPConfig{Addr: ":0", ReadHeaderTimeout: time.Second, MaxBodyBytes: 1 << 20}
 	srv := New(cfg, svc, logger, metrics, telemetry.NewReadiness(true), testDeps())
 	h := srv.Handler()

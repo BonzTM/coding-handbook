@@ -48,6 +48,23 @@ func TestLoadMigrateOnStartup(t *testing.T) {
 	}
 }
 
+func TestLoadMigrateMode(t *testing.T) {
+	t.Setenv("HTTP_ADDR", ":8080")
+
+	// -migrate without a DSN is a fail-fast config error, not a silent no-op.
+	if _, err := Load([]string{"-migrate"}); err == nil {
+		t.Fatal("Load(-migrate) without DB_DSN: expected error, got nil")
+	}
+
+	cfg, err := Load([]string{"-migrate", "-db-dsn", "postgres://localhost:5432/x"})
+	if err != nil {
+		t.Fatalf("Load(-migrate) with DSN: %v", err)
+	}
+	if !cfg.Migrate {
+		t.Error("Migrate = false, want true")
+	}
+}
+
 func TestLoadFlagsBeatEnv(t *testing.T) {
 	// Precedence: flags > environment. The env sets one value, the flag another.
 	t.Setenv("HTTP_ADDR", ":1111")
@@ -223,6 +240,7 @@ func TestValidate(t *testing.T) {
 		{"auth enabled without jwks url", func(c *Config) {
 			c.Auth = AuthConfig{Enabled: true, Issuer: "i", Audience: "a"}
 		}},
+		{"migrate without dsn", func(c *Config) { c.Migrate = true }},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

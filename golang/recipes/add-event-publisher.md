@@ -31,3 +31,5 @@ Use this when a feature needs to emit messages or events to another system or in
 - integration test for the publish path or outbox relay
 - negative test for broker failure or relay lag behavior
 - observability review showing publish success, failure, and retry signals
+
+Governing doc: [eventing-and-messaging.md](../services/eventing-and-messaging.md). The compiling exemplar is [`reference/exampleworker/`](../reference/exampleworker/): the transactional-outbox store and relay (drain pending → publish → mark sent, so a crash between commit and publish recovers on the next scan) in [`internal/messaging/outbox.go`](../reference/exampleworker/internal/messaging/outbox.go), publishing through the broker-neutral `Broker` interface and CloudEvents-style `Message` envelope in [`broker.go`](../reference/exampleworker/internal/messaging/broker.go).

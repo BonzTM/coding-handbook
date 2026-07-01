@@ -56,9 +56,11 @@ func (r *Readiness) Ready() bool { return r.ready.Load() }
 
 // Metrics is the low-cardinality metrics seam consumed by the rest of the
 // service. It is intentionally tiny (an interface of 1-3 methods, per
-// golang/foundations/package-design.md). Production swaps in a Prometheus
-// adapter behind this same interface; the reference build uses NopMetrics or
-// ExpvarMetrics so it needs no external dependency.
+// golang/foundations/package-design.md). The reference wires the Prometheus
+// adapter (NewPromMetrics) in main behind this same interface; NopMetrics and
+// ExpvarMetrics remain drop-in implementations for tests and builds that must
+// avoid the external dependency — swap the adapter in main, never the call
+// sites.
 //
 // Implementations MUST keep label values low-cardinality (route patterns and
 // status classes, never request IDs, user IDs, or raw paths) per

@@ -8,11 +8,12 @@ It is its own Go module (`github.com/example/exampleservice`) so editor tooling
 resolves the internal imports cleanly when you open it in isolation. The
 language baseline is **Go 1.24+**.
 
-> **Note:** the module's `go.mod` `go` directive is `go 1.25.0`, not `1.24`.
-> Pinning `golangci-lint` as a `go tool` dependency pulls in a tool graph that
-> requires Go 1.25, which raises the directive (`go mod tidy` re-asserts it).
-> This is a real, instructive consequence of treating linters as versioned tool
-> dependencies; the 1.24+ baseline still describes the service code itself.
+> **Note:** the module's `go.mod` `go` directive is `go 1.26.0`, not `1.24`.
+> Pinning `golangci-lint` and `sqlc` as `go tool` dependencies pulls in a tool
+> graph that requires Go 1.26 (the sqlc tool graph sets the floor), which raises
+> the directive (`go mod tidy` re-asserts it). This is a real, instructive
+> consequence of treating linters and generators as versioned tool dependencies;
+> the 1.24+ baseline still describes the service code itself.
 
 ## What it is
 
@@ -25,7 +26,7 @@ language baseline is **Go 1.24+**.
 - A dedicated **audit logger** on its own stream (separate from the app log) that
   records security-relevant actions — authentication failure, authorization
   denial, and successful data-mutating writes — with who/what/when/where and no
-  secrets or PII, per `operations/security.md`.
+  secrets or PII, per [operations/security.md](../../operations/security.md).
 - Structured logging with `log/slog`, a readiness flag, real Prometheus metrics
   (`GET /metrics`), and config-gated OpenTelemetry tracing with W3C context
   propagation.
@@ -42,6 +43,14 @@ go run ./cmd/exampleservice
 # Run against Postgres (pure-Go pgx driver; self-migrate on startup):
 DB_DSN='postgres://user:pass@localhost:5432/exampleservice?sslmode=disable' \
   DB_MIGRATE_ON_STARTUP=true go run ./cmd/exampleservice
+
+# One-shot migration mode: apply the embedded goose migrations against DB_DSN,
+# then exit 0 (non-zero with a clear error on failure; DB_DSN is required).
+# This is the production path for schema changes — a deployment runs the SAME
+# image as a migration Job (args: ["-migrate"]) ahead of the rollout, so the
+# startup self-migrate above stays a dev/CI convenience:
+DB_DSN='postgres://user:pass@localhost:5432/exampleservice?sslmode=disable' \
+  go run ./cmd/exampleservice -migrate
 ```
 
 Then:
@@ -90,9 +99,10 @@ make verify
 
 The `lint`, `fmt`, and `vuln` targets use `go tool` directives
 (`go tool golangci-lint`, `go tool govulncheck`); add the tools with
-`go get -tool ...` per `golang/foundations/project-setup.md`. Pinning
-`golangci-lint` this way is what raises the `go.mod` directive to 1.25 (see the
-note above). The core build/test loop needs no extra tools:
+`go get -tool ...` per
+[golang/foundations/project-setup.md](../../foundations/project-setup.md).
+Pinning the tools this way is what raises the `go.mod` directive to 1.26 (see
+the note above). The core build/test loop needs no extra tools:
 
 ```bash
 go build ./...
@@ -106,24 +116,24 @@ Each package embodies a specific handbook doc:
 
 | Package / file | Responsibility | Governing handbook doc |
 |---|---|---|
-| `cmd/exampleservice/main.go` | thin main: signal context, config load, slog, wiring, errgroup, ordered bounded shutdown | `foundations/context-and-concurrency.md`, `templates/cmd-app-main.go.txt` |
-| `internal/config` | env+flags load, fail-fast `Validate`, no globals/init | `foundations/configuration.md` |
-| `internal/core` | widgets domain service; defines the `Store` interface it consumes (interface-at-consumer); injected `Clock` | `foundations/package-design.md`, `foundations/data-modeling.md`, `foundations/time.md` |
-| `internal/db/memory.go` | in-memory `Store` test/dev double (default + tests); same keyset-pagination contract as Postgres | `services/database.md` |
-| `internal/db/postgres.go` | runnable `database/sql` repository (pure-Go pgx driver); explicit pool sizing; delegates SQL to the sqlc-generated layer; maps the typed `*pgconn.PgError` SQLSTATE `23505` to `core.ErrAlreadyExists` | `services/database.md` |
-| `internal/db/migrations/*.sql` | goose-tagged (`-- +goose Up`/`Down`) schema migrations creating `widgets` (composite `(tenant_id, id)` key + `(tenant_id, created_at, id)` keyset index) and `idempotency_keys`, embedded via `//go:embed` | `services/database.md`, `recipes/add-idempotent-write.md` |
-| `internal/db/migrate.go` | `embed.FS` + goose runner (`goose.SetBaseFS`/`UpContext`); config-gated by `DB_MIGRATE_ON_STARTUP` | `services/database.md` |
-| `internal/db/queries.sql`, `sqlc.yaml`, `internal/db/sqlcgen` | sqlc source queries, config (v2, `database/sql`, postgresql), and committed generated code; regenerate with `go tool sqlc generate` | `services/database.md` |
-| `internal/auth` | bearer-token (JWT) verification against a JWKS key source; pins iss/aud, allowlists RS*/ES* algorithms (rejects `alg=none`); `Verifier` seam with a JWKS impl + an injectable static impl for offline tests | `services/http-services.md`, `services/security.md` |
-| `internal/api/http` | transport adapter: server hardening, middleware order (recovery → request-id/trace → authn → logging/metrics → authz → idempotency → handler), decode→validate→core→map→encode, DTOs, error mapping; Idempotency-Key middleware; emits audit events on authn failure, authz denial, and create | `services/http-services.md`, `foundations/serialization.md`, `foundations/errors-and-logging.md`, `operations/security.md`, `recipes/add-idempotent-write.md` |
-| `internal/telemetry` | `slog` logger construction, readiness flag, metrics seam (no-op + expvar + Prometheus), config-gated OTel tracer provider; dedicated `AuditLogger` (separate slog handler/sink) for who/what/when/result audit events | `operations/observability.md`, `operations/security.md`, `foundations/errors-and-logging.md` |
-| `internal/buildinfo` | `Name`/`Version`/`Commit` stamped via `-ldflags` | `foundations/project-setup.md` |
-| `Makefile`, `.golangci.yml`, `Dockerfile`, `.dockerignore`, `.env.example` | adapted copies of `golang/templates/*` with the real module path | `quality/linting.md`, `operations/deployment.md` |
+| `cmd/exampleservice/main.go` | thin main: signal context, config load, slog, wiring, errgroup, ordered bounded shutdown; one-shot `-migrate` mode for migration Jobs | [foundations/context-and-concurrency.md](../../foundations/context-and-concurrency.md), [templates/cmd-app-main.go.txt](../../templates/cmd-app-main.go.txt) |
+| `internal/config` | env+flags load, fail-fast `Validate`, no globals/init | [foundations/configuration.md](../../foundations/configuration.md) |
+| `internal/core` | widgets domain service; defines the `Store` interface it consumes (interface-at-consumer); injected `Clock` | [foundations/package-design.md](../../foundations/package-design.md), [foundations/data-modeling.md](../../foundations/data-modeling.md), [foundations/time.md](../../foundations/time.md) |
+| `internal/db/memory.go` | in-memory `Store` test/dev double (default + tests); same keyset-pagination contract as Postgres | [services/database.md](../../services/database.md) |
+| `internal/db/postgres.go` | runnable `database/sql` repository (pure-Go pgx driver); explicit pool sizing; delegates SQL to the sqlc-generated layer; maps the typed `*pgconn.PgError` SQLSTATE `23505` to `core.ErrAlreadyExists` | [services/database.md](../../services/database.md) |
+| `internal/db/migrations/*.sql` | goose-tagged (`-- +goose Up`/`Down`) schema migrations creating `widgets` (composite `(tenant_id, id)` key + `(tenant_id, created_at, id)` keyset index) and `idempotency_keys`, embedded via `//go:embed` | [services/database.md](../../services/database.md), [recipes/add-idempotent-write.md](../../recipes/add-idempotent-write.md) |
+| `internal/db/migrate.go` | `embed.FS` + goose runner (`goose.SetBaseFS`/`UpContext`); config-gated by `DB_MIGRATE_ON_STARTUP` at startup and the engine behind the one-shot `-migrate` mode | [services/database.md](../../services/database.md) |
+| `internal/db/queries.sql`, `sqlc.yaml`, `internal/db/sqlcgen` | sqlc source queries, config (v2, `database/sql`, postgresql), and committed generated code; regenerate with `go tool sqlc generate` | [services/database.md](../../services/database.md) |
+| `internal/auth` | bearer-token (JWT) verification against a JWKS key source; pins iss/aud, allowlists RS*/ES* algorithms (rejects `alg=none`); `Verifier` seam with a JWKS impl + an injectable static impl for offline tests | [services/http-services.md](../../services/http-services.md), [operations/security.md](../../operations/security.md) |
+| `internal/api/http` | transport adapter: server hardening, middleware order (recovery → request-id/trace → authn → logging/metrics → authz → idempotency → handler), decode→validate→core→map→encode, DTOs, error mapping; Idempotency-Key middleware; emits audit events on authn failure, authz denial, and create | [services/http-services.md](../../services/http-services.md), [foundations/serialization.md](../../foundations/serialization.md), [foundations/errors-and-logging.md](../../foundations/errors-and-logging.md), [operations/security.md](../../operations/security.md), [recipes/add-idempotent-write.md](../../recipes/add-idempotent-write.md) |
+| `internal/telemetry` | `slog` logger construction, readiness flag, metrics seam (no-op + expvar + Prometheus), config-gated OTel tracer provider; dedicated `AuditLogger` (separate slog handler/sink) for who/what/when/result audit events | [operations/observability.md](../../operations/observability.md), [operations/security.md](../../operations/security.md), [foundations/errors-and-logging.md](../../foundations/errors-and-logging.md) |
+| `internal/buildinfo` | `Name`/`Version`/`Commit` stamped via `-ldflags` | [foundations/project-setup.md](../../foundations/project-setup.md) |
+| `Makefile`, `.golangci.yml`, `Dockerfile`, `.dockerignore`, `.env.example` | adapted copies of [golang/templates/](../../templates/) with the real module path | [quality/linting.md](../../quality/linting.md), [operations/deployment.md](../../operations/deployment.md) |
 
 ## Observability
 
 The telemetry the handbook describes is real and demonstrated, per
-`operations/observability.md`.
+[operations/observability.md](../../operations/observability.md).
 
 - **Metrics (Prometheus)**: `telemetry.NewPromMetrics` owns a private registry
   (not the global default) and implements the same `telemetry.Metrics` seam the
@@ -186,7 +196,7 @@ unsafe writes. All libraries are pure-Go (`github.com/golang-jwt/jwt/v5`,
   filters on the `tenant_id` column with a composite primary key — so one tenant
   cannot observe another's rows. Cross-tenant isolation is proven by unit tests
   (and a live integration test).
-- **Idempotency-Key** (`recipes/add-idempotent-write.md`): `POST /widgets`
+- **Idempotency-Key** ([recipes/add-idempotent-write.md](../../recipes/add-idempotent-write.md)): `POST /widgets`
   **requires** an `Idempotency-Key` header scoped to **(tenant, route, key)**; a
   missing key is rejected with **400** (the recipe's recommended stance for
   resource creation). The first use processes the write and persists the response
@@ -207,9 +217,9 @@ unsafe writes. All libraries are pure-Go (`github.com/golang-jwt/jwt/v5`,
   performs the write, and completes the record before `COMMIT` (the SQL path
   *should* adopt this; `sqlcgen.Queries.WithTx` exists for it). The in-memory
   store has no transaction and is documented as not single-transaction. See
-  `recipes/add-idempotent-write.md` (Steps 4 and the Atomic-commit invariant) and
+  [recipes/add-idempotent-write.md](../../recipes/add-idempotent-write.md) (Steps 4 and the Atomic-commit invariant) and
   `internal/db/idempotency_postgres.go`.
-- **Audit logging** (`operations/security.md` ### Audit Logging): a **dedicated**
+- **Audit logging** ([operations/security.md](../../operations/security.md) ### Audit Logging): a **dedicated**
   `telemetry.AuditLogger` — a SEPARATE `log/slog` handler and sink, not the
   application logger — records the security-relevant actions: an authentication
   failure (`authMiddleware`), an authorization denial (`requireRole`), and a
@@ -247,7 +257,8 @@ unsafe writes. All libraries are pure-Go (`github.com/golang-jwt/jwt/v5`,
   widget + the keyset list, and assert the unique-violation → `ErrAlreadyExists`
   mapping; they are kept out of the default offline `make verify`.
 - **errgroup**: lifecycle orchestration uses `golang.org/x/sync/errgroup`,
-  matching the canonical `templates/cmd-app-main.go.txt`.
+  matching the canonical
+  [templates/cmd-app-main.go.txt](../../templates/cmd-app-main.go.txt).
 - **Runtime dependencies**: beyond `errgroup`, the service links the
   OpenTelemetry SDK + OTLP/HTTP trace exporter + `otelhttp`, the Prometheus
   client (`client_golang`), and the pgx stdlib driver (`jackc/pgx/v5`) for the

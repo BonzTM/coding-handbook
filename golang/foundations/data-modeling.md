@@ -70,6 +70,14 @@ A function taking `(string, string, string)` invites a caller to pass them in th
 
 The cost is at the boundary: a named type does not automatically marshal or scan the way you may expect, and crossing JSON, SQL, or flags needs deliberate handling. Keep the underlying type a plain `string`/`int64` (not a struct) so the conversion stays cheap, and centralize marshal/scan behavior on the type. See [serialization.md](serialization.md) for the round-trip rules.
 
+### ID Generation: Server-Issued UUIDv7 By Default
+
+The server generates identifiers, and the default format is **UUIDv7** — time-ordered, so new rows land at the hot end of a B-tree index instead of scattering like random v4, while staying globally unique and non-guessable. Use `github.com/google/uuid` (`uuid.NewV7()`, available since v1.6.0) and store the value as the database's native `uuid` type where one exists, `text` otherwise (persistence rules per [../services/database.md](../services/database.md)).
+
+Client-supplied IDs are acceptable only when the client genuinely owns the identity — an external system's key, or an idempotent-create where the caller names the resource. The reference's `POST /widgets` is exactly that documented variant: the request body carries an `id`, core validates it non-empty, and the store's `(tenant_id, id)` primary key turns a duplicate into an `already_exists` conflict rather than a silent overwrite. If you accept a client ID, validate it at the boundary and enforce uniqueness in storage the same way.
+
+Never expose sequential integers publicly: they are enumerable (an attacker can walk `/orders/1..n`) and they leak business volume. A serial column may still exist internally (e.g. as a keyset-pagination tiebreaker), but the wire-facing identifier is the UUID.
+
 ### Optional Fields: Choose By Meaning, Not Habit
 
 There are four ways to model "this field might not have a value." Pick by what *absent* means in the domain, not by reflex. Defaulting everything to `*T` is a forbidden pattern — it sprays nil checks across the codebase and pushes panics to runtime.

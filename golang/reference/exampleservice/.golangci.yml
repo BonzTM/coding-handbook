@@ -4,7 +4,6 @@
 # Run with: make lint   (which calls `go tool golangci-lint run`)
 #
 # Policy and the rationale for every enabled linter live in golang/quality/linting.md.
-# Replace the org/project placeholders below with the real module path before committing.
 version: "2"
 
 linters:
@@ -16,20 +15,34 @@ linters:
     - bodyclose      # HTTP/SQL response bodies are closed (leak + connection-reuse bug)
     - copyloopvar    # loop-variable capture bugs (replaces exportloopref)
     - errorlint      # %w wrapping and errors.Is/As usage, not == comparisons
+    - exhaustive     # switches over enum-style constants cover every value
+    - fatcontext     # contexts rebuilt inside loops (unbounded value-chain growth)
+    - gochecknoinits # no init() functions; wiring belongs in main/run
     - gocritic       # broad correctness/performance/style diagnostics
     - gosec          # security: unchecked file paths, weak crypto, SQL building
+    - intrange       # Go 1.22 `for i := range n` over manual counted loops
+    - misspell       # common misspellings in comments, strings, and identifiers
+    - modernize      # legacy patterns with modern stdlib replacements (min/max, slices, ...)
     - nilerr         # returning nil when a non-nil error was just checked
     - nilnesserr     # returning a nil error after a nil-pointer-deref guard
     - noctx          # HTTP requests sent without a context.Context
+    - nolintlint     # every //nolint names a linter and carries a reason
     - perfsprint     # cheaper alternatives to fmt.Sprintf on hot paths
     - prealloc       # slices that should be preallocated in loops
+    - protogetter    # proto getters over direct field access (no-op without generated protobuf code)
+    - recvcheck      # mixed value/pointer receivers on the same type
     - revive         # configurable replacement for the retired golint
     - rowserrcheck   # sql.Rows.Err() is checked after iteration
+    - sloglint       # slog calls do not mix key-value args and slog.Attr in one call
+    - spancheck      # OTel spans are ended and errors recorded (no-op without the otel import)
     - sqlclosecheck  # sql.Rows / sql.Stmt are closed
     - testifylint    # correct testify assertion usage (no-op without testify)
+    - thelper        # test helpers call t.Helper() so failures point at the caller
+    - tparallel      # misuse of t.Parallel() between parent tests and subtests
     - unconvert      # redundant type conversions
     - unparam        # unused function parameters and results
     - usestdlibvars  # use stdlib constants (http.StatusOK, time.RFC3339, ...)
+    - usetesting     # t.Context()/t.TempDir()/t.Setenv over raw os/context in tests
     - wastedassign   # assignments whose value is never read
 
   settings:
@@ -48,6 +61,16 @@ linters:
       errorf: true
       asserts: true
       comparison: true
+    exhaustive:
+      # A default: branch is an explicit decision that covers the remaining values.
+      default-signifies-exhaustive: true
+    nolintlint:
+      # A bare //nolint is unauditable; name the linter and state the reason.
+      require-explanation: true
+      require-specific: true
+    sloglint:
+      # Mixing key-value args and slog.Attr in one call is a latent runtime bug.
+      no-mixed-args: true
     revive:
       rules:
         - name: blank-imports

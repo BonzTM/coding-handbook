@@ -7,8 +7,9 @@ Bootstrap checklist for a brand-new Go repo using this handbook.
 - [ ] Run `go mod init <module-path>` in the repo root.
 - [ ] Create `cmd/<app>/main.go` and keep it limited to startup, wiring, and shutdown.
 - [ ] Create `internal/config`, `internal/core`, `internal/telemetry`, and any needed transport or storage packages.
-- [ ] Add tool-only dependencies (such as `govulncheck`, `staticcheck`, `sqlc`, `golangci-lint`, or migration tooling) with `go get -tool <pkg>` (Go 1.24+); they are recorded as `tool` directives in `go.mod` and run with `go tool <name>`. Do not use the legacy `tools.go` blank-import pattern.
+- [ ] Add tool-only dependencies (such as `govulncheck`, `sqlc`, `golangci-lint`, or migration tooling) with `go get -tool <pkg>` (Go 1.24+); they are recorded as `tool` directives in `go.mod` and run with `go tool <name>`. Do not use the legacy `tools.go` blank-import pattern. `staticcheck` is not pinned separately — it already runs inside `golangci-lint`.
 - [ ] Decide whether the repo is a service, worker, CLI, library, or a combination, then document that shape in the repo README.
+- [ ] Mirror the reference example matching that shape ([../reference/](../reference/) — `exampleservice` for HTTP+Postgres, `examplegrpc` for gRPC, `exampleworker` for event-driven) rather than inventing a structure.
 - [ ] Decide which boundaries need explicit contracts in `api/`, transport docs, or schema sources.
 - [ ] If the repo publishes or consumes messages, decide event envelope shape, idempotency policy, ordering guarantees, retry limits, and DLQ behavior up front.
 

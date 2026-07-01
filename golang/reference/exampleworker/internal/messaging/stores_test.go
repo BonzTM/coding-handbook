@@ -70,7 +70,10 @@ func TestMemoryBrokerNackRedelivers(t *testing.T) {
 	t.Parallel()
 
 	b := messaging.NewMemoryBroker(messaging.WithBuffer(4))
-	ctx := context.Background()
+	// t.Context() is cancelled when the test ends, so the broker's relay
+	// goroutine stops with the test; the package's goleak TestMain fails
+	// anything still running afterwards.
+	ctx := t.Context()
 	sub, err := b.Subscribe(ctx, "t")
 	if err != nil {
 		t.Fatalf("subscribe: %v", err)

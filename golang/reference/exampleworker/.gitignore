@@ -3,7 +3,9 @@
 /out
 /dist
 *.exe
-exampleworker
+# The built binary at the module root only: a bare "exampleworker" pattern
+# would also ignore the cmd/exampleworker source directory.
+/exampleworker
 
 # Test and coverage artifacts
 *.test

@@ -10,6 +10,47 @@
 # Replace: ghcr.io/org/repo image + tag, the namespace, the DB_DSN Secret name,
 # and the resource numbers (sized from your load tests, not copied blindly).
 ---
+# Pre-rollout database migration Job. This implements the "CI-apply (default
+# for prod)" rule from ../services/database.md: the deploy pipeline runs this
+# Job to completion BEFORE rolling the Deployment below, so the schema is
+# current when the first new pod takes traffic. Same image as the app; the
+# binary applies its embedded goose migrations and exits when run with
+# `-migrate` — the reference service implements exactly this flag (a run-and-exit
+# path over the same embedded goose runner as internal/db.Migrate; the
+# DB_MIGRATE_ON_STARTUP env stays dev/single-writer only). DELETE this Job for
+# shapes without a database.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: exampleservice-migrate
+  labels:
+    app.kubernetes.io/name: exampleservice
+spec:
+  # Fail fast: a migration that errors twice needs a human, not more retries.
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: exampleservice
+    spec:
+      # Never restart in place; a failed attempt surfaces as a failed Job the
+      # pipeline stops on, instead of a silent crash loop.
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          # SAME image + tag as the Deployment below; bump both together so the
+          # schema this Job applies is the one the rolled-out code expects.
+          image: ghcr.io/org/repo:v1.2.3
+          args: ["-migrate"]
+          env:
+            # Same runtime secret injection as the app container: the DSN comes
+            # from the platform secret store, never the image.
+            - name: DB_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: exampleservice-db
+                  key: dsn
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:

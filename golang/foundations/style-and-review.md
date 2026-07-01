@@ -12,6 +12,15 @@ Use `gofmt` and standard Go idioms first. Prefer clarity over cleverness.
 - `goimports` is a good editor integration, but the repo contract is still `gofmt`-clean code.
 - Every exported type, function, method, and package should have a comment that explains the contract, not the obvious implementation.
 
+### Naming
+
+- Initialisms stay uppercase: `ID`, `URL`, `HTTP`, `API` — `userID` not `userId`, `ServeHTTP` not `ServeHttp`.
+- Getters carry no `Get` prefix: `Name()` not `GetName()`. Setters, when a type needs them, are `SetName(...)`.
+- Receiver names are one or two letters abbreviating the type (`s` for `*Server`, `wc` for `*WidgetCache`), never `self` or `this`, and the same name on every method of the type.
+- Variable name length scales with scope: `i` and `ok` are right in a three-line loop; anything package-level or long-lived gets a descriptive name.
+- Exported names are read with their package qualifier — avoid stutter (`orders.Service`, not `orders.OrderService`); the package-naming side lives in [package-design.md](./package-design.md) ### Naming Rules.
+- The lint gate enforces part of this mechanically — revive's `var-naming` (initialisms) and `receiver-naming` (receiver consistency) rules, routed via [../quality/linting.md](../quality/linting.md). The rest is review.
+
 ### Documentation Standards
 
 Docs are part of the contract. Treat them with the same rigor as the code they describe.
@@ -29,6 +38,13 @@ Docs are part of the contract. Treat them with the same rigor as the code they d
 - Prefer zero-value-friendly types when practical.
 - Use constructors when invariants must hold or dependencies must be injected.
 - Keep boolean parameters rare; if a call site is hard to read, the API is probably wrong.
+
+### Struct Embedding
+
+- Embedding to satisfy or forward an interface is fine: embed the interface (or a base implementation) and override the methods you care about.
+- Never embed a type in an exported API struct when it leaks methods you do not mean to promise — the embedded type's method set becomes your public API, and removing it later is a breaking change.
+- Prefer a named field unless you deliberately want method promotion; a field keeps the contract explicit at every call site.
+- Never embed to "save typing" in domain types. Embedding is a statement about the API, not a shortcut.
 
 ### Values, Pointers, And Receivers
 

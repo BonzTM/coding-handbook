@@ -175,8 +175,7 @@ func safeMessage(status int, err error) string {
 // failure that carries a named field; other client errors yield none and the
 // envelope reports only the top-level code/message.
 func fieldErrorsFor(err error) []fieldError {
-	var fe core.FieldValidationError
-	if errors.As(err, &fe) {
+	if fe, ok := errors.AsType[core.FieldValidationError](err); ok {
 		return []fieldError{{Field: fe.Field, Code: fe.Code, Message: fe.Reason}}
 	}
 	return nil
