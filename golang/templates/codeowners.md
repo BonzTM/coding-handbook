@@ -2,9 +2,9 @@
 #
 # Placement: this file lives at .github/CODEOWNERS (GitHub also accepts repo-root
 # or docs/ CODEOWNERS; pick ONE). It auto-requests review from the listed owners
-# when matching paths change, and pairs with the repo AGENTS.md change-routing
-# table and maintainer-map routing: routing says which doc to read, CODEOWNERS
-# says who must approve. Keep the two in sync — same package areas, same owners.
+# when matching paths change, and pairs with the repo AGENTS.md Change Routing
+# table: routing says which doc to read, CODEOWNERS says who must approve.
+# Keep the two in sync — same package areas, same owners.
 #
 # Rules: last matching pattern wins, so order general -> specific. Owners are
 # GitHub @users or @org/teams and must have write access. Replace every <owner>.

@@ -5,7 +5,7 @@ This handbook is the default engineering contract for new Go repositories. It is
 ## Start Here
 
 - Humans: read this file, then follow the reading path for your project shape.
-- Agents: read [AGENTS.md](AGENTS.md) first, then [maintainer-map.md](maintainer-map.md), then the relevant topical docs and recipes.
+- Agents: read [AGENTS.md](AGENTS.md) first (it includes the change-routing table), then the relevant topical docs and recipes.
 - Default assumptions unless a repo says otherwise:
   - one module per repo
   - `cmd/` plus `internal/` as the default layout
@@ -19,6 +19,7 @@ This handbook is the default engineering contract for new Go repositories. It is
 | If you are building... | Read in this order |
 |---|---|
 | HTTP service | [foundations/project-setup.md](foundations/project-setup.md) -> [foundations/package-design.md](foundations/package-design.md) -> [foundations/configuration.md](foundations/configuration.md) -> [foundations/contracts-and-compatibility.md](foundations/contracts-and-compatibility.md) -> [services/http-services.md](services/http-services.md) -> [operations/observability.md](operations/observability.md) -> [quality/testing.md](quality/testing.md) -> [recipes/add-http-endpoint.md](recipes/add-http-endpoint.md); compiling exemplar: [reference/exampleservice/](reference/exampleservice/) |
+| Server-rendered web app | the HTTP service path above, inserting [services/web-apps.md](services/web-apps.md) after [services/http-services.md](services/http-services.md) — templates, static assets, sessions, CSRF, and browser security headers layer on the same service skeleton |
 | gRPC service | [foundations/project-setup.md](foundations/project-setup.md) -> [foundations/package-design.md](foundations/package-design.md) -> [foundations/contracts-and-compatibility.md](foundations/contracts-and-compatibility.md) -> [services/grpc-services.md](services/grpc-services.md) -> [foundations/errors-and-logging.md](foundations/errors-and-logging.md) -> [services/database.md](services/database.md) -> [operations/observability.md](operations/observability.md) -> [quality/testing.md](quality/testing.md) -> [recipes/add-grpc-method.md](recipes/add-grpc-method.md); compiling exemplar: [reference/examplegrpc/](reference/examplegrpc/) |
 | Background worker | [foundations/project-setup.md](foundations/project-setup.md) -> [foundations/context-and-concurrency.md](foundations/context-and-concurrency.md) -> [foundations/configuration.md](foundations/configuration.md) -> [operations/observability.md](operations/observability.md) -> [operations/security.md](operations/security.md) -> [recipes/add-background-worker.md](recipes/add-background-worker.md) |
 | Event-driven service or async worker | [foundations/project-setup.md](foundations/project-setup.md) -> [foundations/contracts-and-compatibility.md](foundations/contracts-and-compatibility.md) -> [services/eventing-and-messaging.md](services/eventing-and-messaging.md) -> [services/database.md](services/database.md) -> [operations/observability.md](operations/observability.md) -> [quality/testing.md](quality/testing.md) -> [recipes/add-event-publisher.md](recipes/add-event-publisher.md) -> [recipes/add-event-consumer.md](recipes/add-event-consumer.md); compiling exemplar: [reference/exampleworker/](reference/exampleworker/) |
@@ -52,24 +53,22 @@ Cross-cutting concerns apply across shapes: [services/caching.md](services/cachi
 | Metrics | Prometheus client | the org uses a different required metrics backend |
 | Tracing | OpenTelemetry when services are distributed or latency-sensitive | a local CLI or small library does not need trace infrastructure |
 | CLI parsing | stdlib `flag` | nested subcommands, completions, or manpage generation justify `cobra` |
+| HTML rendering | `html/template` parsed once from `embed.FS` | template volume/complexity justifies a generated-template approach via ADR (see [services/web-apps.md](services/web-apps.md)) |
 | Config loading | explicit env plus flags loader in `internal/config` | a repo-specific operator workflow requires a documented config file |
 
 ## Handbook Map
 
-- [AGENTS.md](AGENTS.md) - fast-path contract for autonomous agents and reviewers
-- [maintainer-map.md](maintainer-map.md) - change routing and sync surfaces
+- [AGENTS.md](AGENTS.md) - fast-path contract and change routing for autonomous agents and reviewers
 - [maintainer-reference.md](maintainer-reference.md) - architecture, rationale, and deeper guidance
-- [onboarding-and-handoff.md](onboarding-and-handoff.md) - day-one reading path for a new owner and the outgoing-owner handoff
-- [glossary.md](glossary.md) - shared vocabulary for handbook terms and conventions
-- [CONTRIBUTING.md](CONTRIBUTING.md) - how to propose and make changes to this handbook
 - `foundations/` - package layout, contracts, idioms, config, errors, concurrency, time, data modeling, serialization, [shared constructs](foundations/shared-constructs.md), and [git-workflow.md](foundations/git-workflow.md) (commits, branches, changelog)
 - `quality/` - test strategy, linting, fuzzing, benchmarks, race detection, and proof commands
-- `services/` - transport, eventing, persistence, and [caching.md](services/caching.md) guidance for HTTP, gRPC, messaging, database, and cache work
+- `services/` - transport, eventing, persistence, [caching.md](services/caching.md), and [web-apps.md](services/web-apps.md) guidance for HTTP, gRPC, server-rendered web, messaging, database, and cache work
 - `operations/` - telemetry, security, audit logging, resilience, deployment, operability/SLOs, data handling/PII, CI, releases, and runtime expectations
 - `decisions/` ([README.md](decisions/README.md)) - architecture decision records (ADRs) plus dependency and framework selection rules
 - `checklists/` ([README.md](checklists/README.md)) and `recipes/` ([README.md](recipes/README.md)) - executable startup, review, release, handoff, and implementation guidance
 - `templates/` - committed copy-paste scaffolding (Makefile, `.golangci.yml`, `main.go`, project README/AGENTS/CODEOWNERS, ADR template)
 - `reference/` - three complete, compiling, `make verify`-green services that compose the handbook patterns end to end: [exampleservice](reference/exampleservice/) (HTTP+Postgres, full enterprise stack), [examplegrpc](reference/examplegrpc/) (gRPC), and [exampleworker](reference/exampleworker/) (event-driven worker); copy the one matching your shape to bootstrap a new repo
+- Team process (human-facing; not read during app builds): [onboarding-and-handoff.md](onboarding-and-handoff.md) for ownership transfer, [checklists/incident-response.md](checklists/incident-response.md) for on-call, [glossary.md](glossary.md) as a term lookup, and [CONTRIBUTING.md](CONTRIBUTING.md) for changing the handbook itself
 
 ## What This Handbook Optimizes For
 
@@ -82,8 +81,9 @@ Cross-cutting concerns apply across shapes: [services/caching.md](services/cachi
 ## Where To Go Next
 
 - New repo bootstrap: [checklists/new-project.md](checklists/new-project.md)
+- Resolving WHAT decisions before a build (take from spec, ask, or default): [checklists/spec-intake.md](checklists/spec-intake.md)
 - Active agent work: [AGENTS.md](AGENTS.md)
-- Routing a change quickly: [maintainer-map.md](maintainer-map.md)
+- Routing a change quickly: [AGENTS.md](AGENTS.md) (## Change Routing)
 - Choosing third-party libraries: [decisions/framework-selection.md](decisions/framework-selection.md)
 - Recording an architecture decision: [decisions/architecture-decision-records.md](decisions/architecture-decision-records.md)
 - Copy-paste scaffolding for a new repo: [templates/](templates/)

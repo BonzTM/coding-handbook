@@ -16,5 +16,5 @@ Project ADRs use [../templates/adr-template.md](../templates/adr-template.md). C
 ## Where To Go Next
 
 - Handbook overview: [../README.md](../README.md)
-- Routing a decision-shaped change: [../maintainer-map.md](../maintainer-map.md)
+- Routing a decision-shaped change: [../AGENTS.md](../AGENTS.md) (## Change Routing)
 - The ADR file to copy: [../templates/adr-template.md](../templates/adr-template.md)

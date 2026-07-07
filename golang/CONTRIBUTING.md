@@ -1,5 +1,7 @@
 # Contributing To This Handbook
 
+> **Handbook-maintenance document.** This governs changes to the handbook itself, not to application repos. It is not part of the app-generation contract.
+
 How to change the Go handbook itself without breaking the contract it exists to enforce.
 
 ## Default Approach
@@ -10,8 +12,7 @@ This handbook is a control plane, not prose. A change is correct only when the f
 
 The handbook is structured as a two-speed documentation system. Find where your change belongs before you touch a file:
 
-- **Fast path — [AGENTS.md](AGENTS.md).** Repo-wide invariants, change defaults, and the verification bar. Terse and authoritative. Refine it; never weaken it. Most changes are *not* fast-path changes.
-- **Routing — [maintainer-map.md](maintainer-map.md).** Change-type to file-set mapping. Edit this when you add a new kind of change or a new file that a change type should also touch.
+- **Fast path — [AGENTS.md](AGENTS.md).** Repo-wide invariants, change defaults, the Change Routing table (change-type to file-set mapping), and the verification bar. Terse and authoritative. Refine it; never weaken it. Edit the routing table when you add a new kind of change or a new file that a change type should also touch; most other changes are *not* fast-path changes.
 - **Slow path — [maintainer-reference.md](maintainer-reference.md).** Architecture, package map, lifecycle, test taxonomy, and rationale. Edit this when the *why* behind a rule changes or needs fuller background than the fast path carries.
 
 Topic depth lives in `foundations/`, `services/`, `quality/`, and `operations/`; copy-paste scaffolding in `templates/`; step-by-step procedures in `recipes/`; gates in `checklists/`; and the binding decisions in `decisions/`.
@@ -33,7 +34,7 @@ Voice everywhere: terse, opinionated, contract-not-tutorial. State the standardi
 Three sets of files are load-bearing and drift silently. When you change one, change its partners in the same PR:
 
 - **[AGENTS.md](AGENTS.md) <-> [maintainer-reference.md](maintainer-reference.md) <-> recipes.** An invariant added to the fast path needs its rationale in the slow path and its procedure in a recipe; a new recipe needs a routing row and, if it introduces a rule, a fast-path line. None of the three may contradict the others.
-- **[maintainer-map.md](maintainer-map.md) routing rows** must point at files that exist and list the real also-update set for that change type.
+- **[AGENTS.md](AGENTS.md) Change Routing rows** must point at files that exist and list the real also-update set for that change type.
 - **Templates and the worked example** must reflect the rule they scaffold. If you change a default that `templates/` or `reference/exampleservice/` embodies, update the scaffold too.
 
 ### Keep The Reference Service Green

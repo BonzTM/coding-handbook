@@ -35,7 +35,7 @@ Where the destination contains a name you choose (`<app>`), pick it when you cop
 | [cmd-app-main.go.txt](cmd-app-main.go.txt) | `cmd/<app>/main.go` | [foundations/project-setup.md](../foundations/project-setup.md) |
 | [project-readme.md](project-readme.md) | `README.md` | [README.md](../README.md) |
 | [project-agents.md](project-agents.md) | `AGENTS.md` | [AGENTS.md](../AGENTS.md) |
-| [codeowners.md](codeowners.md) | `.github/CODEOWNERS` | [maintainer-map.md](../maintainer-map.md) |
+| [codeowners.md](codeowners.md) | `.github/CODEOWNERS` | [AGENTS.md](../AGENTS.md) (## Change Routing) |
 | [adr-template.md](adr-template.md) | `docs/adr/NNNN-<slug>.md` | [decisions/architecture-decision-records.md](../decisions/architecture-decision-records.md) |
 | [github-workflows-ci.yml](github-workflows-ci.yml) | `.github/workflows/ci.yml` | [operations/ci-and-release.md](../operations/ci-and-release.md) |
 | [github-workflows-release.yml](github-workflows-release.yml) | `.github/workflows/release.yml` | [operations/ci-and-release.md](../operations/ci-and-release.md) |

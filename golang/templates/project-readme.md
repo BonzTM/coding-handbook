@@ -63,7 +63,7 @@ Layout follows the handbook default (`cmd/` + `internal/`):
 - `api/` — published wire contracts (`.proto`, OpenAPI) when present.
 
 Authoritative contributor rules: [AGENTS.md](AGENTS.md).
-Change routing by file area: <link to repo maintainer-map.md if present, else delete>.
+Change routing by file area: the Change Routing table in [AGENTS.md](AGENTS.md).
 Architecture decisions and their rationale: [decisions/](decisions/).
 
 ## Testing

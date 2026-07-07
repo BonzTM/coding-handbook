@@ -34,8 +34,7 @@ Three compiling reference modules under [reference/](reference/) embody this arc
 
 ## Two-Speed Documentation Model
 
-- Fast path: [AGENTS.md](AGENTS.md) for invariants, task loop, and baseline proof.
-- Routing path: [maintainer-map.md](maintainer-map.md) for change type to file set mapping.
+- Fast path: [AGENTS.md](AGENTS.md) for invariants, the task loop, change-type-to-file-set routing, and baseline proof.
 - Slow path: this file for architecture, package map, test taxonomy, lifecycle, and rationale.
 
 Use the fast path for most tasks. Use this file when a change crosses layers, introduces new runtime behavior, or challenges an existing default.
@@ -134,8 +133,7 @@ Event delivery rules are operational contracts too: whether delivery is at-least
 
 ## Related Docs
 
-- Fast path: [AGENTS.md](AGENTS.md)
-- Change routing: [maintainer-map.md](maintainer-map.md)
+- Fast path and change routing: [AGENTS.md](AGENTS.md)
 - Project layout: [foundations/project-setup.md](foundations/project-setup.md)
 - Package boundaries: [foundations/package-design.md](foundations/package-design.md)
 - Contracts and compatibility: [foundations/contracts-and-compatibility.md](foundations/contracts-and-compatibility.md)

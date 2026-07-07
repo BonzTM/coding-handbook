@@ -1,5 +1,7 @@
 # Glossary
 
+> **Lookup aid, not required reading.** Consult a single entry when a handbook term is unclear; nothing here needs to be read front-to-back to build.
+
 Canonical vocabulary for this handbook. Every term below has exactly one meaning across all repos; use the word for nothing else, and define it nowhere else. Each entry is one or two sentences plus the doc that owns the full rule — read that doc before relying on the term. Start from [README.md](README.md) for how these pieces fit together.
 
 Terms are alphabetical.
@@ -74,4 +76,4 @@ The single committed proof gate: tidy, fmt-check, lint, vet, test, race, vuln, a
 
 - [README.md](README.md) — how the layers, defaults, and proof gate fit together.
 - [AGENTS.md](AGENTS.md) — the fast-path contract that uses this vocabulary.
-- [maintainer-map.md](maintainer-map.md) — which doc owns each change surface.
+- [AGENTS.md](AGENTS.md) (## Change Routing) — which doc owns each change surface.

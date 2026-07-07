@@ -1,5 +1,7 @@
 # Incident Response Checklist
 
+> **Team-process document.** This guides humans operating the service in production. It is not part of the app-generation contract; agents building or changing code do not read it.
+
 What an on-call engineer does, in order, when paged. Stabilize before you understand: the first job is to stop the bleeding with the most reversible action available, not to find root cause. Drive every step from the service runbook ([../templates/runbook.md](../templates/runbook.md)) and the SLO/alerting contract in [../operations/operability.md](../operations/operability.md).
 
 ## Acknowledge & Assess

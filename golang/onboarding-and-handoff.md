@@ -1,8 +1,10 @@
 # Onboarding And Handoff
 
+> **Team-process document.** This governs project ownership transfer between people. It is not part of the app-generation contract; agents building or changing code do not read it.
+
 This guide is for taking over a Go repository that was built from this handbook. It defines what a new owner reads on day one, the questions they must be able to answer before they truly own the repo, and what the outgoing owner is responsible for.
 
-This is not the handbook's own "Start Here" in [README.md](README.md). That section is about working *inside the handbook*. This guide is about owning a *project that was built with it*. If you are an agent or human contributing a single change, you want [AGENTS.md](AGENTS.md) and [maintainer-map.md](maintainer-map.md), not this file.
+This is not the handbook's own "Start Here" in [README.md](README.md). That section is about working *inside the handbook*. This guide is about owning a *project that was built with it*. If you are an agent or human contributing a single change, you want [AGENTS.md](AGENTS.md) (including its Change Routing table), not this file.
 
 ## Who This Is For
 
@@ -21,7 +23,7 @@ Read these in the project repo, not in the handbook. Do not skip ahead; each ste
 | 1 | Project `README.md` | What the repo is, its shape (service/worker/CLI/library), how to build and run it locally, where the entrypoints are. |
 | 2 | Project `AGENTS.md` | The repo's invariants, the task loop, and the exact baseline proof commands contributors must pass. |
 | 3 | `decisions/` ADRs | Why the load-bearing choices were made, what was rejected, and which decisions are still open. Read newest and any `Proposed`/`Accepted`-but-unimplemented records first. |
-| 4 | Project maintainer map / `maintainer-map.md` equivalent | How a given change routes to files, sync surfaces, and proof steps. |
+| 4 | Project `AGENTS.md` Change Routing table (or its equivalent) | How a given change routes to files, sync surfaces, and proof steps. |
 | 5 | Run `make verify` locally | Confirm the safety gate passes on your machine from a clean checkout before you change anything. |
 | 6 | The runbook | How the thing is deployed, what its SLOs and alerts are, what to do at 3 a.m., and who to escalate to. |
 

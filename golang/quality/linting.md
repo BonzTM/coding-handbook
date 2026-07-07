@@ -10,12 +10,12 @@ This doc owns lint policy. The `gofmt -s`, `go vet`, and `staticcheck` mentions 
 
 ### Versioning And Pinning
 
-The config targets golangci-lint **v2** (`version: "2"` schema; current stable is v2.12.2). The v2 schema is not compatible with v1 configs: linters split into a `linters:` block and a `formatters:` block, and the file must declare `version: "2"`. Do not paste v1 examples into this config.
+The config targets golangci-lint **v2** (`version: "2"` schema). The v2 schema is not compatible with v1 configs: linters split into a `linters:` block and a `formatters:` block, and the file must declare `version: "2"`. Do not paste v1 examples into this config.
 
-Pin the linter as a module tool so every developer and CI run uses the same version. The v2 module path includes `/v2`:
+Pin the linter as a module tool so every developer and CI run uses the same version. The v2 module path includes `/v2`; pin the latest v2 release — the verified, `make verify`-proven pin lives in the [reference modules'](../reference/) `go.mod` tool directives, so copy it from there rather than trusting a version number written in prose:
 
 ```bash
-go get -tool github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
+go get -tool github.com/golangci/golangci-lint/v2/cmd/golangci-lint@<latest-v2-release>
 ```
 
 This records a `tool` directive in `go.mod` (the reason for the `go 1.24` baseline). Never use the obsolete `tools.go` / `//go:build tools` pattern. Run it through the toolchain, never a globally installed binary that drifts between machines.

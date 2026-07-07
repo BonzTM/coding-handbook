@@ -10,7 +10,7 @@ The committed [`golang/templates/Dockerfile`](../templates/Dockerfile) and [`gol
 
 ### Multi-Stage Build
 
-- Build stage uses the official `golang` image pinned to a specific patch (e.g. `golang:1.26.4`); the module's `go.mod` baseline stays `go 1.24` with the toolchain pinned to latest stable.
+- Build stage uses the official `golang` image pinned to a specific patch — copy the verified tag from the committed [templates/Dockerfile](../templates/Dockerfile) rather than a version written in prose; the module's `go.mod` baseline stays `go 1.24` with the toolchain pinned to latest stable.
 - Compile a static binary: `CGO_ENABLED=0`. No cgo means no glibc dependency, which is what lets the runtime image be `static`/`scratch`.
 - Prefer pure-Go libraries (e.g. `modernc.org/sqlite` over `mattn/go-sqlite3`; the default `pgx` driver is already pure-Go) so the static `CGO_ENABLED=0` build stays trivial; a cgo dependency requires an ADR.
 - Build with `-trimpath` (strips local filesystem paths; release builds only, never the routine `make build`) and stamp version metadata through `-ldflags` into the `internal/buildinfo` package, matching the variables the binary already logs at startup (`Name`, `Version`, `Commit`).
@@ -19,7 +19,7 @@ The committed [`golang/templates/Dockerfile`](../templates/Dockerfile) and [`gol
 
 ### Runtime Image
 
-- Default runtime base: `gcr.io/distroless/static-debian13:nonroot`. It ships CA certificates, `/etc/passwd` with a `nonroot` user, and tzdata, but no shell, no package manager, and no libc — minimal attack surface while still able to make TLS calls and resolve time zones.
+- Default runtime base: distroless static, `nonroot` variant — `gcr.io/distroless/static-<current-debian-release>:nonroot`, with the verified tag pinned in the committed [templates/Dockerfile](../templates/Dockerfile). It ships CA certificates, `/etc/passwd` with a `nonroot` user, and tzdata, but no shell, no package manager, and no libc — minimal attack surface while still able to make TLS calls and resolve time zones.
 - Alternative: `scratch`. Smaller still, but you must `COPY` CA certs and tzdata yourself and create the nonroot UID manually; choose it only when you have a measured reason. Distroless static is the default because it removes those footguns at a negligible size cost.
 - Copy only the binary from the builder. No source, no build cache, no toolchain.
 - `USER nonroot` (or numeric `USER 65532` on scratch). Never run as root.
@@ -64,7 +64,7 @@ Secrets and environment-specific config reach the container at RUNTIME from the 
 
 The probes, runtime limits, and grace-period budget above are not just prose — they are committed, copyable manifests under [`golang/templates/`](../templates/README.md):
 
-- [`docker-compose.yml`](../templates/docker-compose.yml) — the local stack: the service plus a `postgres:16-alpine` with a healthcheck and `depends_on: service_healthy`, wiring `DB_DSN` and the config keys so the SQL path runs the same way CI's integration job does ([ci-and-release.md](ci-and-release.md)).
+- [`docker-compose.yml`](../templates/docker-compose.yml) — the local stack: the service plus a version-pinned Postgres (the pin lives in the template) with a healthcheck and `depends_on: service_healthy`, wiring `DB_DSN` and the config keys so the SQL path runs the same way CI's integration job does ([ci-and-release.md](ci-and-release.md)).
 - [`k8s-deployment.yaml`](../templates/k8s-deployment.yaml) — the production rollout: a nonroot Deployment with resource requests/limits, `GOMEMLIMIT`/`GOMAXPROCS` derived from those limits, `/livez` liveness + `/readyz` readiness probes, `terminationGracePeriodSeconds` above the app shutdown grace, a `DB_DSN` secret, a Service, an HPA, and a migration Job (below).
 
 Copy them and adjust the image, namespace, secret name, and resource numbers; this doc is the contract they implement, so do not restate it in the manifests.

@@ -6,7 +6,7 @@ This repository is a centralized engineering handbook for language- and stack-sp
 
 - Humans: start with `golang/README.md`
 - Agents: start with `AGENTS.md`
-- Maintainers routing changes inside the Go handbook: use `golang/maintainer-map.md`
+- Maintainers routing changes inside the Go handbook: use the Change Routing table in `golang/AGENTS.md`
 
 ## Current Handbooks
 

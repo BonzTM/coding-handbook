@@ -1,12 +1,33 @@
 # Spec Intake Checklist
 
-Pre-flight checklist run BEFORE an agent writes any code. The handbook supplies the HOW — layout, error model, logging, migrations, the `make verify` gate — but it deliberately defers a set of WHAT decisions to you and an ADR. This checklist makes those deferrals explicit so a complete answer set yields a one-shot build instead of a stall mid-implementation. Each item names the handbook doc or ADR that consumes the answer; an unanswered box is an open question the build cannot absorb later for free.
+Pre-flight checklist run BEFORE an agent writes any code. The handbook supplies the HOW — layout, error model, logging, migrations, the `make verify` gate — and this checklist covers the WHAT decisions the spec must supply. Each item names the handbook doc or ADR that consumes the answer. A box is "answered" only when the answer is concrete enough to wire (a named scheme, a named store, a number), not "TBD" or "probably".
 
-Run it top to bottom. A box is "answered" only when the answer is concrete enough to wire (a named scheme, a named store, a number), not "TBD" or "probably". Every answer that departs from a handbook default becomes an ADR before code starts.
+## How To Resolve Each Box
+
+Resolve every applicable box in this order. Intake never stalls the build; it decides *where each answer comes from* and makes that traceable.
+
+1. **From the spec.** If the request already answers it, record the answer and move on.
+2. **Ask.** Asking beats inferring. When the requester is reachable, ask the open questions that materially change the build — batched, once, up front. Do not interrogate box-by-box, and do not ask about boxes the defaults table below already covers unless the answer would change the architecture (see step 3 for the two that always deserve a question).
+3. **Default.** When the requester is unreachable, has said "just build it", or the box is low-stakes for an MVP: take the entry from [Defaults When The Spec Is Silent](#defaults-when-the-spec-is-silent), record it as a stated assumption, and proceed. Two boxes are irreversible-grade — **tenancy** and **compliance posture** — ask about them whenever interaction is possible; when it is not, take the default and flag the assumption at the top of the delivery notes, not buried in an ADR appendix.
+4. **Skip.** Sections marked as not applying to the project's shape are skipped, not answered. A CLI tool has no tenancy model; a library has no deploy target. Do not ask questions the shape makes meaningless.
+
+Never invent an answer that is neither in the spec, nor from the requester, nor in the defaults table. Every defaulted answer is disclosed in the delivery summary (project README or the baseline ADR) so the requester can veto it cheaply; ADR-grade defaults (marked below) get a real ADR per [../decisions/architecture-decision-records.md](../decisions/architecture-decision-records.md).
+
+## Section Applicability By Shape
+
+| Section | HTTP/web service | gRPC service | Event-driven worker | CLI | Library |
+|---|---|---|---|---|---|
+| Shape & Scope | yes | yes | yes | yes | yes |
+| Identity & Access | yes | yes | broker-credential posture only | skip (none-by-design) | skip |
+| Tenancy | if it persists data for external principals | same | same | skip | skip |
+| Data | if it persists data | same | same | if it writes files/state | skip |
+| Integration | if it has async boundaries or external dependencies | same | yes | external calls only | skip |
+| Runtime & Deploy | yes | yes | yes | release/registry rows only | skip |
+| Compliance & SLOs | yes | yes | yes | compliance row only | skip |
 
 ## Shape & Scope
 
-- [ ] Shape is one of service, worker, CLI, library, or a named combination — this fixes the `cmd/`+`internal/` layout and entrypoint count ([new-project.md](new-project.md)).
+- [ ] Shape is one of HTTP/API service, server-rendered web app, gRPC service, worker, CLI, library, or a named combination — this fixes the `cmd/`+`internal/` layout and entrypoint count ([new-project.md](new-project.md); web apps additionally follow [../services/web-apps.md](../services/web-apps.md)).
 - [ ] The MVP's bounded feature set is written down: what ships in v1 and, explicitly, what does not. Scope creep mid-build is the most common one-shot killer.
 - [ ] Each boundary is classified sync (request/response) or async (queued/event-driven); async boundaries pull in the Integration section below.
 - [ ] Whether a browser client calls the API is decided; if so, the allowed CORS origins and credentials policy are listed — this shapes the HTTP middleware stack ([../services/http-services.md](../services/http-services.md), [../operations/security.md](../operations/security.md)).
@@ -21,7 +42,7 @@ Run it top to bottom. A box is "answered" only when the answer is concrete enoug
 
 ## Tenancy
 
-- [ ] Single-tenant or multi-tenant is decided — this is irreversible-grade and an ADR ([../decisions/architecture-decision-records.md](../decisions/architecture-decision-records.md)).
+- [ ] Single-tenant or multi-tenant is decided — this is irreversible-grade and an ADR ([../decisions/architecture-decision-records.md](../decisions/architecture-decision-records.md)); ask when you can, and flag the default loudly when you cannot.
 - [ ] If multi-tenant, the isolation model is chosen: Postgres row-level security (RLS) vs application-scoped `tenant_id` filtering vs database/schema-per-tenant — with the tradeoff recorded.
 - [ ] Tenant resolution is defined: how the tenant is derived from the authenticated principal (claim, header, subdomain) and threaded through to every query.
 
@@ -47,15 +68,40 @@ Run it top to bottom. A box is "answered" only when the answer is concrete enoug
 
 ## Compliance & SLOs
 
-- [ ] Regulatory posture is stated (none, GDPR, HIPAA, PCI, SOC2, etc.) — it feeds data classification, retention, and audit-logging requirements ([../operations/data-handling.md](../operations/data-handling.md), [../operations/security.md](../operations/security.md)).
+- [ ] Regulatory posture is stated (none, GDPR, HIPAA, PCI, SOC2, etc.) — it feeds data classification, retention, and audit-logging requirements ([../operations/data-handling.md](../operations/data-handling.md), [../operations/security.md](../operations/security.md)). Irreversible-grade: ask when you can.
 - [ ] SLO targets and an error budget are set (availability, latency objectives) so alerts and rollout gates have a definition of "healthy" ([rollout-and-slo-readiness.md](rollout-and-slo-readiness.md)).
+
+## Defaults When The Spec Is Silent
+
+The fallbacks for step 3 above. "Record as" says where the assumption must be disclosed: **ADR** means a real ADR in the project's `decisions/`; **note** means a line in the delivery summary / project README assumptions list. Anything not in this table has no silent default — it comes from the spec or the requester.
+
+| Decision | Default when the spec is silent | Record as |
+|---|---|---|
+| Browser client / CORS | no browser clients → no CORS middleware; a server-rendered web app is same-origin and also needs no CORS | note |
+| Authentication | bearer JWT validated against the issuer's JWKS (OIDC-shaped), as wired in [../reference/exampleservice/](../reference/exampleservice/); internal-only workers and CLIs are none-by-design | ADR |
+| Authorization | RBAC — role claims mapped to per-route requirements in middleware, with core-level checks for resource ownership | same ADR as auth |
+| Tenancy | single-tenant | ADR, flagged at the top of the delivery notes |
+| Primary store | PostgreSQL via `database/sql` (+ `sqlc` when SQL volume grows); no second datastore | note |
+| PII / classification | classify fields per [../operations/data-handling.md](../operations/data-handling.md); anything person-identifying is treated as confidential; PII never in logs or metrics | note |
+| Retention | retain until user-initiated deletion; deletion is a hard delete | note |
+| Broker (async required, none named) | build against the broker-agnostic seam with SQL outbox + inbox ([../reference/exampleworker/](../reference/exampleworker/)); prefer whatever broker the platform already operates; with zero platform signal, NATS JetStream (pure-Go client, small operational footprint) | ADR |
+| Delivery semantics | at-least-once with inbox dedupe on consumers; HTTP unsafe writes take `Idempotency-Key` per [../recipes/add-idempotent-write.md](../recipes/add-idempotent-write.md) | note |
+| External calls | timeout on every call, bounded retries with jitter per [../operations/resilience.md](../operations/resilience.md); fail-closed unless the spec says degrade | note |
+| Target platform | containerized and Kubernetes-shaped — distroless image, `/livez` + `/readyz` probes, graceful shutdown, [../templates/k8s-deployment.yaml](../templates/k8s-deployment.yaml); runs locally under [../templates/docker-compose.yml](../templates/docker-compose.yml) | note |
+| Secrets | env vars injected by the orchestrator/platform; no secrets-manager SDK in application code | note |
+| Container registry | `ghcr.io`, per [../templates/github-workflows-release.yml](../templates/github-workflows-release.yml) | note |
+| Observability backend | Prometheus scrape for `/metrics`, OTel traces exported via OTLP env config, `log/slog` JSON to stdout | note |
+| Config source | env vars with fail-fast validation plus a committed `.env.example` | note (handbook default) |
+| Compliance posture | none assumed; the PII and audit-logging rules above still apply | note, flagged at the top of the delivery notes |
+| SLO starting targets | 99.9% availability, p99 latency 300ms — written into the runbook as *starting* targets to tune with real traffic, not promises | note + runbook per [../operations/operability.md](../operations/operability.md) |
 
 ## Verification
 
 Intake is complete, and the build may start, when:
 
-- every box above is answered with a concrete, wire-ready choice — no "TBD";
-- each non-default choice (auth model, tenancy model, additional datastore, broker, transport, any handbook deviation) is recorded as an accepted ADR per [../decisions/architecture-decision-records.md](../decisions/architecture-decision-records.md), with the baseline stack captured in `decisions/0001-*`;
-- the bounded MVP scope is written down and agreed, so a one-shot build has fixed edges.
+- every applicable box is resolved — from the spec, from the requester, or from the defaults table — and skipped sections are skipped because of shape, not convenience;
+- each non-default choice and each ADR-grade default (auth model, tenancy, additional datastore, broker, platform deviation) is recorded as an accepted ADR per [../decisions/architecture-decision-records.md](../decisions/architecture-decision-records.md), with the baseline stack captured in `decisions/0001-*`;
+- every silently defaulted answer is listed in the delivery summary, with tenancy and compliance assumptions flagged first;
+- the bounded MVP scope is written down, so a one-shot build has fixed edges.
 
-If any box is unanswerable, that is the next conversation to have — not a default to silently assume.
+An unanswerable box is never a silent stall: ask when you can, default and disclose when you cannot.

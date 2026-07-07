@@ -23,6 +23,9 @@ Before adding a dependency, answer all of these:
 | gRPC / RPC framework | `google.golang.org/grpc` (grpc-go) with `buf` for codegen | `connectrpc.com/connect` (connect-go) for HTTP/1.1 + gRPC + gRPC-Web browser-friendly endpoints | hand-rolled RPC, or gateway/proxy sprawl before it is needed |
 | request validation | explicit validation in the handler/core after decode (see [../foundations/serialization.md](../foundations/serialization.md), [../foundations/data-modeling.md](../foundations/data-modeling.md)) — no library | `github.com/go-playground/validator/v10` for large struct-tag-driven validation | reflection-heavy validation frameworks as the day-one default |
 | CORS | none — service-to-service APIs need no CORS layer (see [../services/http-services.md](../services/http-services.md) ### CORS) | `github.com/rs/cors` (pure Go), or a small hand-rolled handler for a trivial static allowlist, when spec intake identifies browser clients | wildcard origin combined with credentials; middleware that reflects arbitrary `Origin` values |
+| HTML templating | `html/template` parsed once from `embed.FS` (see [../services/web-apps.md](../services/web-apps.md)) | a compile-time-checked template generator (e.g. `a-h/templ`, ADR-level) when template volume and type-safety pressure outgrow stdlib | `text/template` for browser output; string-built HTML |
+| sessions | server-side sessions via `github.com/alexedwards/scs/v2` with a store the repo already runs (Postgres) | stateless signed cookies only for tiny, non-revocable UI state (ADR-level) | hand-rolled session/cookie crypto; JWTs in cookies as a session substitute |
+| CSRF | stdlib `net/http.CrossOriginProtection` (Go 1.25+) wrapped around the mux (see [../services/web-apps.md](../services/web-apps.md)) | token-based CSRF middleware (ADR-level) only when clients send neither `Sec-Fetch-Site` nor `Origin` | disabling protection app-wide to accommodate one endpoint; CSRF-exempting state-changing GETs instead of removing them |
 | CLI | stdlib `flag` | `cobra` for real subcommand trees and shell completion | `viper`-driven global config magic |
 | config loading | explicit env plus flags in `internal/config` | a small parsing helper if it stays explicit | global config frameworks with implicit precedence |
 | logging | `log/slog` | thin adapters only when the sink requires them | bespoke logging frameworks |
@@ -45,6 +48,16 @@ Before adding a dependency, answer all of these:
 | binary linkage | pure-Go / `CGO_ENABLED=0` static | cgo ONLY with an ADR, after ruling out a pure-Go alternative | cgo pulled in transitively unnoticed |
 | secrets manager | injected env vars or mounted files from an external manager (the app reads injected material at startup) | Vault, a cloud KMS / Secrets Manager, or sealed-secrets when the platform provides one | embedding plaintext in source/image/build args, or the app fetching and caching long-lived plaintext itself |
 | audit / log sink | structured `log/slog` to a dedicated audit stream the platform collects | a SIEM, managed audit service, or append-only store when compliance requires tamper-evidence | mixing audit events into the shared application log; no retention or access control on the sink |
+
+## Mandated Frameworks
+
+Sometimes the spec or the requester mandates a framework this table would not choose — Gin, Echo, Fiber, an org-standard stack. A mandate is honored, not fought, and not silently absorbed:
+
+- Record an ADR stating the framework was **mandated by the requester**, which repo area may depend on it, and what the handbook default would have been. The Approval Questions still get written answers; "mandated" answers question 1.
+- The framework-independent invariants survive unchanged: `cmd/`+`internal/` layout, thin `main`, `ctx` as first parameter, `%w` error wrapping, `log/slog` (through an adapter if the framework insists on its own logger), the structured error envelope, the testing bar, and the full `make verify` gate.
+- Confine framework types to the transport package (`internal/api/http`). Handlers translate the framework's context into plain arguments for `internal/core`; core never imports the framework. This keeps the mandate reversible and the domain testable without it.
+- Flag `net/http`-incompatible frameworks explicitly in the ADR. Fiber is `fasthttp`-based: stdlib middleware, `http.Handler` composition, and `httptest` do not apply, and the handbook's HTTP guidance holds only in spirit. That cost belongs in writing before code starts.
+- A mandate covers the named framework only — it is not a license to relax the rest of this table.
 
 ## Common Mistakes And Forbidden Patterns
 

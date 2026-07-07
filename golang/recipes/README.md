@@ -2,7 +2,7 @@
 
 Step-by-step implementation guides for the common Go changes this handbook governs. Each recipe is a fixed-shape contract — **Files To Touch / Steps / Invariants / Proof** — and links the topical doc that owns the rules it applies. Use a recipe when you know what kind of change you are making and want the exact file set and proof steps without rediscovering them.
 
-For routing a change to its recipe and related obligations, start at [../maintainer-map.md](../maintainer-map.md). For the handbook overview, see [../README.md](../README.md).
+For routing a change to its recipe and related obligations, start at the Change Routing table in [../AGENTS.md](../AGENTS.md). For the handbook overview, see [../README.md](../README.md).
 
 ## HTTP And gRPC Transport
 
@@ -53,6 +53,6 @@ For routing a change to its recipe and related obligations, start at [../maintai
 
 ## Where To Go Next
 
-- Routing a change to the right files: [../maintainer-map.md](../maintainer-map.md)
+- Routing a change to the right files: [../AGENTS.md](../AGENTS.md) (## Change Routing)
 - Handbook overview: [../README.md](../README.md)
 - Checklists for lifecycle gates: [../checklists/README.md](../checklists/README.md)

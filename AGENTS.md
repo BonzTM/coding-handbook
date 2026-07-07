@@ -5,7 +5,7 @@ This root file is routing-only. It is not a second source of truth for any langu
 ## Fast Path
 
 1. If the task is Go-related or unspecified, read `golang/AGENTS.md`.
-2. Use `golang/maintainer-map.md` to route the change.
+2. Use the Change Routing table in `golang/AGENTS.md` to route the change.
 3. Read the relevant topical docs under `golang/` before editing or answering.
 
 ## Current Default

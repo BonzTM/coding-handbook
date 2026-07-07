@@ -27,7 +27,7 @@ Use table-driven tests when the behavior is truly the same shape repeated across
 - External HTTP clients should usually use `httptest.Server` before they use mocks.
 - Contract-heavy systems may need a smaller unit suite plus one or two high-value end-to-end tests.
 - Event-driven systems should add duplicate-delivery, replay, retry-exhaustion, and ordering tests where those semantics matter.
-- Prove the real-DB path in CI, not just the offline in-memory store. The committed [CI workflow](../templates/github-workflows-ci.yml) adds an `integration` job that runs a `postgres:16` service container and executes `go test -tags=integration ./...` with `TEST_DATABASE_DSN` set, so the `//go:build integration` SQL tests (and the embedded migrations) run against a live Postgres. The offline `make verify` gate stays the required check; the integration job is the second gate that exercises the database path the service ships. See [../operations/ci-and-release.md](../operations/ci-and-release.md).
+- Prove the real-DB path in CI, not just the offline in-memory store. The committed [CI workflow](../templates/github-workflows-ci.yml) adds an `integration` job that runs a version-pinned Postgres service container and executes `go test -tags=integration ./...` with `TEST_DATABASE_DSN` set, so the `//go:build integration` SQL tests (and the embedded migrations) run against a live Postgres. The offline `make verify` gate stays the required check; the integration job is the second gate that exercises the database path the service ships. See [../operations/ci-and-release.md](../operations/ci-and-release.md).
 
 ### Test Doubles
 
