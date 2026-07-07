@@ -46,6 +46,7 @@ Limit the rate at which the service issues calls to a dependency (client-side) o
 - Default model is a **token bucket**: a steady refill rate plus a bounded burst. The conventional Go choice is `golang.org/x/time/rate` (`rate.NewLimiter(r, b)` with `Wait`/`Allow`/`Reserve`); it is stdlib-adjacent and transparent. Adopting it is still recorded through [framework-selection](../decisions/framework-selection.md) like any dependency.
 - Use `Wait(ctx)` for outbound client throttling so the limiter respects the caller's deadline; use `Allow()` for server-side admission where you reject rather than block.
 - Size the limiter to the upstream's published or measured capacity, not to your own ambition. A client-side limit that protects an upstream from your own fan-out is cheaper than discovering its limit in production.
+- Key inbound (server-side) limits per authenticated principal (the token subject) or per tenant; fall back to per-IP only at anonymous edges where no identity exists. Per-key limiters live in an in-memory map of `*rate.Limiter` with idle-entry eviction so the map stays bounded — or let the platform edge (gateway/ingress) own global limits and keep only coarse in-process admission control. No reference implementation exists yet; [reference/exampleservice/](../reference/exampleservice/) documents `rate_limited` as a reserved-but-unproduced error code for exactly this 429 path.
 
 ### Load Shedding
 

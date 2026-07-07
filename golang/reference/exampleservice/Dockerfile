@@ -3,8 +3,9 @@
 
 # ---- build stage ----------------------------------------------------------
 # Pin the builder to a specific patch release (latest stable). The language
-# baseline is Go 1.24+; the go.mod `go` directive is 1.25 because pinning
-# golangci-lint as a `go tool` dependency requires it (see README/Makefile).
+# baseline is Go 1.24+; the go.mod `go` directive is 1.26 because pinning
+# golangci-lint and sqlc as `go tool` dependencies requires it (the sqlc tool
+# graph sets the floor; see README/Makefile).
 FROM golang:1.26.4 AS build
 
 WORKDIR /src

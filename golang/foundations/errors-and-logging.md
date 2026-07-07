@@ -11,6 +11,13 @@ Error semantics and structured logging rules that keep failures actionable inste
 - Preserve opaque boundaries where implementation details should stay private.
 - Add context at package or subsystem boundaries, not mechanically at every stack frame.
 
+### Panic And Recover
+
+- Libraries and internal packages never panic on expected failures — bad input, missing rows, dependency errors are all returned errors.
+- `panic` is reserved for programmer error and provably impossible states: a violated invariant a constructor already guaranteed, an unreachable branch. Init-time invariant violations (`regexp.MustCompile` on a constant pattern, malformed embedded assets) may also panic — the process should not start wrong.
+- `recover` belongs only at process or request boundaries. The sanctioned place is the recovery middleware, which logs the panic and maps it to an opaque 500 (see [../reference/exampleservice/](../reference/exampleservice/) `internal/api/http/middleware.go`).
+- Never use `panic`/`recover` as control flow — not for early exit from deep recursion, not as a substitute for returning an error.
+
 ### Error Categories
 
 | Kind | Use for | Example handling |

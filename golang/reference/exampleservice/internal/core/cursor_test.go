@@ -64,3 +64,44 @@ func TestDecodeCursorInvalid(t *testing.T) {
 		})
 	}
 }
+
+// FuzzDecodeCursor fuzzes the untrusted-input edge of pagination: the token is
+// base64 straight off the wire, exactly the shape fuzzing is for, per
+// golang/quality/testing.md ### Fuzzing. It asserts invariants, not exact
+// outputs: every failure is the typed ErrInvalidCursor with a zero cursor
+// (reject, don't crash), and every success round-trips through EncodeCursor.
+// The f.Add seeds plus the committed corpus under testdata/fuzz/FuzzDecodeCursor/
+// replay as ordinary deterministic tests in `go test` (so inside make verify);
+// exploration runs on demand: go test -fuzz=FuzzDecodeCursor -fuzztime=30s ./internal/core/
+func FuzzDecodeCursor(f *testing.F) {
+	// One valid token plus a near-miss for each rejection branch of DecodeCursor.
+	f.Add(core.EncodeCursor(core.Cursor{CreatedAt: time.Unix(1700000000, 123456789).UTC(), ID: "w-42"}))
+	f.Add("")                                       // start-of-collection sentinel
+	f.Add("!!!not-base64!!!")                       // rejected before JSON decoding
+	f.Add("Zm9vYmFy")                               // "foobar": base64 but not JSON
+	f.Add("eyJ0IjoiMjAyMy0wMS0wMVQwMDowMDowMFoifQ") // {"t":"2023-01-01T00:00:00Z"}: missing id
+
+	f.Fuzz(func(t *testing.T, token string) {
+		got, err := core.DecodeCursor(token)
+		if err != nil {
+			if !errors.Is(err, core.ErrInvalidCursor) {
+				t.Errorf("DecodeCursor(%q) error = %v, want ErrInvalidCursor", token, err)
+			}
+			if !got.IsZero() {
+				t.Errorf("DecodeCursor(%q) = %+v alongside an error, want zero cursor", token, got)
+			}
+			return
+		}
+		// Round-trip: whatever decoded must survive encode/decode unchanged, so a
+		// client echoing the token back resumes at exactly the same position. This
+		// also proves EncodeCursor cannot be driven to its marshal panic by any
+		// value DecodeCursor accepts.
+		again, err := core.DecodeCursor(core.EncodeCursor(got))
+		if err != nil {
+			t.Fatalf("re-decode of re-encoded cursor %+v: %v", got, err)
+		}
+		if !again.CreatedAt.Equal(got.CreatedAt) || again.ID != got.ID {
+			t.Errorf("round-trip = %+v, want %+v", again, got)
+		}
+	})
+}

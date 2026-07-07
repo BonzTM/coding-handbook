@@ -38,6 +38,7 @@ Where the destination contains a name you choose (`<app>`), pick it when you cop
 | [codeowners.md](codeowners.md) | `.github/CODEOWNERS` | [maintainer-map.md](../maintainer-map.md) |
 | [adr-template.md](adr-template.md) | `docs/adr/NNNN-<slug>.md` | [decisions/architecture-decision-records.md](../decisions/architecture-decision-records.md) |
 | [github-workflows-ci.yml](github-workflows-ci.yml) | `.github/workflows/ci.yml` | [operations/ci-and-release.md](../operations/ci-and-release.md) |
+| [github-workflows-release.yml](github-workflows-release.yml) | `.github/workflows/release.yml` | [operations/ci-and-release.md](../operations/ci-and-release.md) |
 | [Dockerfile](Dockerfile) | `Dockerfile` | [operations/deployment.md](../operations/deployment.md) |
 | [.dockerignore](.dockerignore) | `.dockerignore` | [operations/deployment.md](../operations/deployment.md) |
 | [docker-compose.yml](docker-compose.yml) | `docker-compose.yml` | [operations/deployment.md](../operations/deployment.md) |
@@ -53,17 +54,12 @@ The `Makefile` is the single verification entrypoint for both humans and CI: `ma
 
 ## The Reference Service
 
-A complete, compiling, `make verify`-green example lives at [../reference/exampleservice/](../reference/exampleservice/). It composes every template above with the handbook's patterns, and it is the canonical, proven source for the artifacts that are project-shaped rather than copy-verbatim — copy them from the reference instead of from a static snippet so they cannot drift out of a building state:
+A complete, compiling, `make verify`-green example lives at [../reference/exampleservice/](../reference/exampleservice/). It composes the build-and-verify templates above (`Makefile`, `Dockerfile`, `.dockerignore`, `.golangci.yml`) with the handbook's code patterns, proving they hold together in a building repo; the repo-governance artifacts (README/AGENTS/CODEOWNERS skeletons, workflows, k8s manifests, check-list docs) are deliberately not duplicated there — copy those from this tree. The reference is also the canonical, proven source for the artifacts that are project-shaped rather than copy-verbatim — copy them from the reference instead of from a static snippet so they cannot drift out of a building state:
 
 - `internal/config` loader (env load, fail-fast validation, no globals) — [foundations/configuration.md](../foundations/configuration.md)
 - `internal/buildinfo` (version/commit stamping via `-ldflags`) — [operations/observability.md](../operations/observability.md)
 - `.env.example`, `.gitignore`, `.editorconfig` — proven copies in the reference root
-
-## Planned, Not Yet Added
-
-This tree is intentionally growing. Still referenced by the prose but not yet committed:
-
-- `sqlc.yaml` and a committed `migrations/` example for the chosen migration tool (`goose`) — [services/database.md](../services/database.md)
+- `sqlc.yaml` (module root) and the goose `migrations/` embedded via `go:embed` in `internal/db/` — [services/database.md](../services/database.md)
 
 ## Where To Go Next
 

@@ -9,6 +9,14 @@ Context propagation, cancellation, and concurrency ownership rules for Go code t
 - Use `signal.NotifyContext` in `main` to create the process root context.
 - Use `errgroup.Group` when sibling goroutines must fail or stop together.
 
+### Context Values
+
+`context.Value` is for request-scoped data that rides along with the request, never for dependencies.
+
+- Request-scoped identity and correlation values — the authenticated principal, the request ID, trace context — MAY live in the context, behind an unexported key type with typed accessor functions. The references do exactly this: `WithPrincipal`/`PrincipalFrom` over a `principalCtxKey struct{}` in [../reference/exampleservice/](../reference/exampleservice/) `internal/core/identity.go`, and the request-ID key in `internal/api/http/middleware.go`.
+- The accessor pair is the contract: an unexported key type (no collisions), a `WithX(ctx, v)` setter, and an `XFrom(ctx) (T, bool)` getter whose `false` return lets callers fail closed instead of acting on a zero value.
+- Everything else stays out of the context: dependencies, config, database handles, and loggers-as-dependencies are wired through constructors, where the type system can see them. A value in context is invisible in every signature it passes through — acceptable for correlation data, unacceptable for anything code depends on to work.
+
 ### Primitive Selection
 
 | Use this | When | Avoid when |
@@ -51,6 +59,7 @@ The grace period is a config key (`cfg.ShutdownGrace`, loaded per [configuration
 ## Common Mistakes And Forbidden Patterns
 
 - Storing `context.Context` in a struct.
+- Passing dependencies, config, or loggers through `context.Value` — the context carries request-scoped identity and correlation only (see ### Context Values).
 - Starting background goroutines from handlers without a supervisor.
 - Using `context.Background()` deep inside the stack instead of propagating the caller's context.
 - Adding concurrency to hide slow code before measuring or simplifying the design.

@@ -43,8 +43,11 @@ func TestOutboxRelayPublishesThenMarksSent(t *testing.T) {
 		t.Errorf("pending = %d, want 0 after flush", outbox.PendingCount())
 	}
 
-	// Messages are on the broker, in order.
-	sub, err := broker.Subscribe(context.Background(), "widget.events")
+	// Messages are on the broker, in order. Subscribe with t.Context(), which is
+	// cancelled when the test ends: the broker's relay goroutine runs until its
+	// subscribe context ends, and the package's goleak TestMain requires every
+	// test to stop what it starts.
+	sub, err := broker.Subscribe(t.Context(), "widget.events")
 	if err != nil {
 		t.Fatalf("subscribe: %v", err)
 	}

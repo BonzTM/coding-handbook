@@ -2,7 +2,6 @@ package health_test
 
 import (
 	"context"
-	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -20,7 +19,7 @@ func (s *stubBroker) Healthy() bool { return s.healthy }
 
 func newSidecar(t *testing.T, ready, brokerHealthy bool, metrics telemetry.Metrics) *health.Server {
 	t.Helper()
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	return health.New(config.HTTPConfig{Addr: ":0", ReadHeaderTimeout: time.Second}, logger, health.Deps{
 		Readiness: telemetry.NewReadiness(ready),
 		Broker:    &stubBroker{healthy: brokerHealthy},

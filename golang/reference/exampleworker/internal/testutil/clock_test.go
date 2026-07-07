@@ -37,12 +37,10 @@ func TestFakeClockConcurrent(t *testing.T) {
 	c := testutil.NewFakeClock(time.Unix(0, 0).UTC())
 	var wg sync.WaitGroup
 	for range 50 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			c.Advance(time.Second)
 			_ = c.Now()
-		}()
+		})
 	}
 	wg.Wait()
 

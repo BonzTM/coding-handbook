@@ -3,7 +3,6 @@ package messaging_test
 import (
 	"context"
 	"encoding/json"
-	"io"
 	"log/slog"
 	"math/rand/v2"
 	"sync"
@@ -17,7 +16,7 @@ import (
 
 // discardLogger returns a logger that drops output so tests stay quiet.
 func discardLogger() *slog.Logger {
-	return slog.New(slog.NewTextHandler(io.Discard, nil))
+	return slog.New(slog.DiscardHandler)
 }
 
 // recordingWaiter is a clock-driven Waiter that NEVER sleeps. It records each

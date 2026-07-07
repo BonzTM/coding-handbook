@@ -3,7 +3,9 @@
 /out
 /dist
 *.exe
-exampleservice
+# The built binary at the module root only: a bare "exampleservice" pattern
+# would also ignore the cmd/exampleservice source directory.
+/exampleservice
 
 # Test and coverage artifacts
 *.test

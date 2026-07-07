@@ -31,3 +31,5 @@ Use this when the repo needs to consume queue or stream messages and turn them i
 - integration test against a real broker path or realistic emulator when semantics matter
 - failure-path test proving retry exhaustion and DLQ or operator-visible handling
 - telemetry review for receive, retry, success, and dead-letter transitions
+
+Governing doc: [eventing-and-messaging.md](../services/eventing-and-messaging.md). The compiling exemplar is [`reference/exampleworker/`](../reference/exampleworker/): the consume loop (decode → inbox dedupe → process → retry-or-DLQ, ack after the terminal decision) in [`internal/messaging/consumer.go`](../reference/exampleworker/internal/messaging/consumer.go), the id-keyed dedupe in [`inbox.go`](../reference/exampleworker/internal/messaging/inbox.go), bounded backoff with full jitter in [`backoff.go`](../reference/exampleworker/internal/messaging/backoff.go), and the dead-letter store in [`dlq.go`](../reference/exampleworker/internal/messaging/dlq.go) — all offline-testable against the in-memory broker in [`memory.go`](../reference/exampleworker/internal/messaging/memory.go).

@@ -3,7 +3,6 @@ package http
 import (
 	"context"
 	"encoding/json"
-	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -79,7 +78,7 @@ func TestListWidgetsGoldenJSON(t *testing.T) {
 func newCappedServer(t *testing.T, maxBodyBytes int64) *Server {
 	t.Helper()
 	svc := core.NewService(db.NewMemory(), fixedClock{t: time.Unix(1700000000, 0).UTC()})
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	cfg := config.HTTPConfig{
 		Addr:              ":0",
 		ReadHeaderTimeout: time.Second,
@@ -153,7 +152,7 @@ func TestErrorEnvelopeGoldenJSON(t *testing.T) {
 // middleware directly with a handler that panics with a secret string.
 func TestServerErrorIsOpaque(t *testing.T) {
 	const secret = "super-secret-internal-detail"
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 
 	boom := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		panic(secret)

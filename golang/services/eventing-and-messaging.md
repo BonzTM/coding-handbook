@@ -2,9 +2,11 @@
 
 Event-driven systems need the same level of rigor as HTTP or database boundaries. Messages are contracts, delivery is a runtime behavior, and replay is part of the design, not an edge case.
 
+The compiling exemplar for this doc is [reference/exampleworker/](../reference/exampleworker/), a broker-neutral consumer/relay worker; the sections below deep-link its files.
+
 ## Default Approach
 
-- Stay broker-neutral in application code when practical.
+- Stay broker-neutral in application code when practical — the reference consumer and relay depend only on the small `Broker` interface in [`reference/exampleworker/internal/messaging/broker.go`](../reference/exampleworker/internal/messaging/broker.go), with an in-memory, channel-backed implementation in [`memory.go`](../reference/exampleworker/internal/messaging/memory.go) that models at-least-once delivery so the whole flow is offline-testable.
 - Assume at-least-once delivery from day one.
 - Make consumers idempotent before adding retries.
 - Treat ordering as per-entity or per-key, never global.
@@ -47,6 +49,7 @@ Recommended metadata fields:
 - Ack after durable side effects, not after parsing.
 - Validation or schema failures are usually non-retryable and should move toward operator visibility or DLQ policy quickly.
 - Transient dependency failures can retry with bounded backoff and jitter.
+- [`reference/exampleworker/internal/messaging/consumer.go`](../reference/exampleworker/internal/messaging/consumer.go) implements exactly this loop — decode, inbox dedupe, process, retry-or-DLQ — and acks only after the terminal decision.
 
 ## Ordering And Concurrency
 
@@ -62,6 +65,7 @@ Recommended metadata fields:
 - Stop retrying after a documented budget; then dead-letter, park, or surface the event for operator action.
 - A dead-letter record should retain original destination, attempt count, failure class, and correlation data.
 - Replays should be operator-controlled, not an infinite feedback loop.
+- The reference implements bounded exponential backoff with full jitter (clock-injected, no real sleeps in tests) in [`reference/exampleworker/internal/messaging/backoff.go`](../reference/exampleworker/internal/messaging/backoff.go), and a `DeadLetter` record retaining topic, attempts, failure class, and reason in [`dlq.go`](../reference/exampleworker/internal/messaging/dlq.go).
 
 ## Outbox And Inbox Patterns
 
@@ -69,6 +73,7 @@ Recommended metadata fields:
 - Write business state and an outbox row in one DB transaction, then relay that row to the broker asynchronously.
 - On the consumer side, use an inbox or durable dedupe table keyed by event ID when duplicate delivery would be harmful.
 - Avoid dual writes to the database and broker in separate success paths without an explicit failure model.
+- The reference implements both sides: the transactional-outbox store and relay (drain pending, publish, mark sent) in [`reference/exampleworker/internal/messaging/outbox.go`](../reference/exampleworker/internal/messaging/outbox.go), and the id-keyed inbox dedupe in [`inbox.go`](../reference/exampleworker/internal/messaging/inbox.go).
 
 ## Suggested Layout
 

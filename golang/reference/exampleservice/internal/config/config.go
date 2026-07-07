@@ -32,6 +32,12 @@ type Config struct {
 	Auth AuthConfig
 	// Idempotency holds the Idempotency-Key middleware settings.
 	Idempotency IdempotencyConfig
+	// Migrate selects the one-shot migration mode: apply the embedded goose
+	// migrations against Database.DSN and exit instead of serving. It is set by
+	// the -migrate flag only (no env key): it is an invocation mode, not ambient
+	// configuration — a deployment passes it as a container arg
+	// (args: ["-migrate"]) so the same image backs a migration Job.
+	Migrate bool
 	// ShutdownGrace bounds ordered shutdown. It must exceed worst-case
 	// in-flight work and stay under the platform termination grace.
 	ShutdownGrace time.Duration
@@ -183,6 +189,10 @@ func Load(args []string) (Config, error) {
 
 	idempotencyTTL := fs.Duration("idempotency-ttl", env.duration("IDEMPOTENCY_TTL", defaultIdempotencyTTL), "how long a stored Idempotency-Key response is replayable")
 
+	// Deliberately flag-only (no env seed): -migrate is how a one-shot
+	// migration Job invokes the binary, not a setting that varies by env.
+	migrateMode := fs.Bool("migrate", false, "apply the embedded goose migrations against DB_DSN and exit (DB_DSN required)")
+
 	shutdownGrace := fs.Duration("shutdown-grace", env.duration("SHUTDOWN_GRACE", defaultShutdownGrace), "graceful shutdown budget")
 
 	// Abort before parsing flags if any env value was malformed: a bad default
@@ -233,6 +243,7 @@ func Load(args []string) (Config, error) {
 		Idempotency: IdempotencyConfig{
 			TTL: *idempotencyTTL,
 		},
+		Migrate:       *migrateMode,
 		ShutdownGrace: *shutdownGrace,
 	}
 
@@ -290,6 +301,12 @@ func (c Config) Validate() error {
 	}
 	if c.Idempotency.TTL <= 0 {
 		return fmt.Errorf("config: IDEMPOTENCY_TTL must be positive, got %s", c.Idempotency.TTL)
+	}
+	// Migration mode needs a database: running -migrate without a DSN is a
+	// deployment mistake (a migration Job with nothing to migrate), so it is a
+	// fail-fast error, never a silent no-op.
+	if c.Migrate && c.Database.DSN == "" {
+		return errors.New("config: DB_DSN must be set when running with -migrate")
 	}
 	return nil
 }

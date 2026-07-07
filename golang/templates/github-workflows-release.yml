@@ -1,0 +1,52 @@
+# Release gate. Builds and publishes the container image when a release tag is
+# pushed. CI (ci.yml) proves the commit; this workflow only packages it — the
+# tag/version rules and the release checklist live in
+# ../operations/ci-and-release.md and ../checklists/release.md.
+#
+# Registry: which registry you publish to is a spec-intake question; GitHub's
+# ghcr.io is the placeholder default here because the GITHUB_TOKEN can push to
+# it with no extra secrets. Swap the login step and image name for ECR/GCR/etc.
+#
+# NOT on GitHub? The portable contract is "on tag v*, docker build with
+# VERSION/COMMIT/CREATED build-args and push the version-tagged image".
+# Replicate that in your CI of choice; everything below is GitHub plumbing.
+#
+# Destination: .github/workflows/release.yml
+
+name: release
+
+on:
+  push:
+    tags: ["v*"] # canonical Go module tags: v1.2.3 (the v prefix is required)
+
+# Least privilege: read source, write packages (the image push). Nothing else.
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Log in to ghcr.io
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      # Build with the metadata the Dockerfile's ARGs expect (VERSION, COMMIT,
+      # CREATED — see the committed Dockerfile template; it stamps them into
+      # internal/buildinfo and the OCI labels). The image tag is the release
+      # tag itself, so the running binary, the image label, and the VCS tag all
+      # agree. Add --build-arg APP=<app> if your entrypoint is not cmd/app.
+      - name: Build and push image
+        run: |
+          VERSION="${GITHUB_REF_NAME}"                 # the pushed tag, e.g. v1.2.3
+          COMMIT="${GITHUB_SHA}"
+          CREATED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          IMAGE="ghcr.io/<org>/<repo>:${VERSION}"
+          docker build \
+            --build-arg VERSION="${VERSION}" \
+            --build-arg COMMIT="${COMMIT}" \
+            --build-arg CREATED="${CREATED}" \
+            -t "${IMAGE}" .
+          docker push "${IMAGE}"

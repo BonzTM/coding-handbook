@@ -8,7 +8,7 @@ Default tool is **goose**: SQL-first, embeddable via `embed.FS`, runnable from c
 
 - `internal/db/migrations/NNNN_<desc>.sql` — one file with `-- +goose Up` and `-- +goose Down` sections
 - `internal/db/migrate.go` — the `embed.FS` holding `migrations/*.sql` plus the apply seam (migrate-on-startup or CI-apply)
-- `internal/db/queries/*.sql` and `internal/db/sqlc.yaml` — if the schema shape changed and the repo uses `sqlc`
+- `internal/db/queries.sql` (or `internal/db/queries/*.sql` once split) and the module-root `sqlc.yaml` — if the schema shape changed and the repo uses `sqlc`; layout per [../services/database.md](../services/database.md)
 - repository methods and callers under `internal/db` and any `internal/core` seam that consumes the new shape
 - integration tests under `internal/db` that run against a real database
 
@@ -24,7 +24,7 @@ Default tool is **goose**: SQL-first, embeddable via `embed.FS`, runnable from c
    - **Backfill:** populate the new shape from the old (a migration step or a one-off job), idempotent and re-runnable.
    - **Release N+1 (switch):** flip reads to the new shape; keep writing both until every instance is on N+1.
    - **Release N+2 (contract):** stop writing the old shape, then drop it. This `DROP` is the only destructive migration, and it ships only after no running version references the old shape.
-5. If the schema shape changed, update `internal/db/queries/*.sql` and run `sqlc generate`; reconcile repository methods and callers with the regenerated types.
+5. If the schema shape changed, update `internal/db/queries.sql` (or the `queries/` directory once split) and run `sqlc generate`; reconcile repository methods and callers with the regenerated types.
 6. Wire the apply strategy through the `embed.FS` so dev, CI, and prod run identical migrations. Pick one and document it:
    - **CI-apply (default for prod):** a deploy step runs `goose up` against the target before the new app version receives traffic.
    - **Migrate-on-startup:** acceptable for single-writer/dev; guard against concurrent appliers and never let startup apply a destructive migration silently.

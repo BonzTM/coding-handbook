@@ -9,7 +9,7 @@ Every PR should run a predictable baseline pipeline.
 | Stage | Commands | Purpose |
 |---|---|---|
 | module hygiene | `go mod tidy`, `go mod verify` | clean module graph |
-| formatting | `gofmt -s -l .` | consistent source shape |
+| formatting | `go tool golangci-lint fmt --diff` (gofumpt + gci, via `make fmt-check`) | consistent source shape |
 | static analysis | `go vet ./...`, `go tool golangci-lint run` (includes `staticcheck`) | catch correctness issues early |
 | tests | `go test ./...`, `go test -race ./...` | functional and concurrency confidence |
 | security | `govulncheck ./...` | supply-chain and known-vulnerability check |
@@ -26,6 +26,10 @@ The `verify` job is the *offline* gate: it runs with no network and no database,
 - use multi-stage container builds for service artifacts; the hardened base-image stance, runtime limits, and probe wiring live in [deployment.md](deployment.md), with a committed [Dockerfile](../templates/Dockerfile) and [.dockerignore](../templates/.dockerignore)
 - add `default.pgo` only after collecting representative production profiles and deciding it materially helps
 - introduce GoReleaser only when release complexity justifies it, not on day one by reflex
+
+### Release Pipeline
+
+Pushing a `v*` tag triggers the release workflow (committed template: [github-workflows-release.yml](../templates/github-workflows-release.yml)): it builds the committed [Dockerfile](../templates/Dockerfile) with the `VERSION`/`COMMIT`/`CREATED` build-args — so the stamped binary, the OCI labels, and the VCS tag all agree per [deployment.md](deployment.md) — and pushes the image to the container registry chosen at spec-intake ([checklists/spec-intake.md](../checklists/spec-intake.md)); the template uses `ghcr.io` as a placeholder.
 
 ### Dependency Updates
 

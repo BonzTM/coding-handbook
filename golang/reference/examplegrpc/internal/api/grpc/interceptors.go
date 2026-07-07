@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"log/slog"
 	"runtime/debug"
+	"slices"
 	"time"
 
 	"go.opentelemetry.io/otel/trace"
@@ -47,8 +48,8 @@ func chainUnary(interceptors ...grpc.UnaryServerInterceptor) grpc.UnaryServerInt
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		// Build the chain from the inside out so interceptors[0] is outermost.
 		chained := handler
-		for i := len(interceptors) - 1; i >= 0; i-- {
-			chained = wrap(interceptors[i], info, chained)
+		for _, interceptor := range slices.Backward(interceptors) {
+			chained = wrap(interceptor, info, chained)
 		}
 		return chained(ctx, req)
 	}

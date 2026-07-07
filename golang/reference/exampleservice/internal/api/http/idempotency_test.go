@@ -85,7 +85,7 @@ func TestIdempotencyDifferentBodyIs422(t *testing.T) {
 // the first holds the lease while the second observes it in flight and gets 409.
 func TestIdempotencyInFlightIs409(t *testing.T) {
 	store := db.NewMemoryIdempotency(time.Hour)
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	clk := fixedClock{t: time.Unix(1700000000, 0).UTC()}
 
 	release := make(chan struct{})
@@ -113,11 +113,9 @@ func TestIdempotencyInFlightIs409(t *testing.T) {
 	// Fire the first request; it blocks inside the handler holding the lease.
 	rec1 := httptest.NewRecorder()
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		mw.ServeHTTP(rec1, newReq())
-	}()
+	})
 	<-started // ensure the lease is held before the duplicate runs
 
 	// Second request with the same key while the first is in flight -> 409.

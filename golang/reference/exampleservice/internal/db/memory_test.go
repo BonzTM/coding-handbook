@@ -86,7 +86,7 @@ func TestMemoryListPageKeysetWalk(t *testing.T) {
 
 	var got []string
 	after := core.Cursor{}
-	for page := 0; page < len(seed)+1; page++ {
+	for range len(seed) + 1 {
 		batch, err := m.ListPage(ctx, testTenant, after, 2)
 		if err != nil {
 			t.Fatalf("ListPage: %v", err)

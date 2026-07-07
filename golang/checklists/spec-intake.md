@@ -9,6 +9,7 @@ Run it top to bottom. A box is "answered" only when the answer is concrete enoug
 - [ ] Shape is one of service, worker, CLI, library, or a named combination — this fixes the `cmd/`+`internal/` layout and entrypoint count ([new-project.md](new-project.md)).
 - [ ] The MVP's bounded feature set is written down: what ships in v1 and, explicitly, what does not. Scope creep mid-build is the most common one-shot killer.
 - [ ] Each boundary is classified sync (request/response) or async (queued/event-driven); async boundaries pull in the Integration section below.
+- [ ] Whether a browser client calls the API is decided; if so, the allowed CORS origins and credentials policy are listed — this shapes the HTTP middleware stack ([../services/http-services.md](../services/http-services.md), [../operations/security.md](../operations/security.md)).
 - [ ] Boundaries needing an explicit contract (`api/`, schema source, transport doc) are identified ([new-project.md](new-project.md)).
 
 ## Identity & Access
@@ -40,6 +41,7 @@ Run it top to bottom. A box is "answered" only when the answer is concrete enoug
 
 - [ ] Target platform is named (Kubernetes, a specific PaaS, bare VM, serverless) — it drives health/readiness and shutdown wiring ([../operations/deployment.md](../operations/deployment.md)).
 - [ ] Secrets manager / source of injected secrets is named (e.g. cloud secrets manager, mounted files, env from orchestrator) — never committed.
+- [ ] Container registry / image-publish target is named (e.g. `ghcr.io`, ECR, Artifact Registry, an internal registry) — the release pipeline pushes there on a `v*` tag ([../operations/ci-and-release.md](../operations/ci-and-release.md)).
 - [ ] Observability backend is named: Prometheus scrape vs OTel collector for metrics/traces, and the log sink ([../operations/observability.md](../operations/observability.md)).
 - [ ] The multi-environment config source is decided (env vars, mounted config, parameter store) and how dev/staging/prod differ ([new-project.md](new-project.md)).
 

@@ -95,7 +95,7 @@ Read this file first, then use [maintainer-map.md](maintainer-map.md) when you k
 
 | Goal | Command | Expectation |
 |---|---|---|
-| format | `gofmt -s -l .` | no files listed |
+| format | `go tool golangci-lint fmt --diff` (via `make fmt-check`; gofumpt + gci) | no diff output |
 | static analysis | `go vet ./...` | exit code 0 |
 | lint | `go tool golangci-lint run` | exit code 0 (policy in [quality/linting.md](quality/linting.md)) |
 | type and compile safety | `go build ./...` | exit code 0 |

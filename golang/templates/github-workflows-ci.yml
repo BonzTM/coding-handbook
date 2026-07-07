@@ -40,6 +40,11 @@ jobs:
   # NOT on GitHub? The portable contract is "run `go test -tags=integration ./...`
   # with TEST_DATABASE_DSN pointing at a throwaway Postgres". Replicate that in
   # your CI of choice; everything else below is GitHub-specific plumbing.
+  #
+  # This job is for database-backed services only. DELETE it for shapes with no
+  # database (CLI, library, queue-only worker). Replace <app> with the database
+  # name you pick — any throwaway name works; it only has to match the health
+  # check and the DSN below.
   integration:
     runs-on: ubuntu-latest
     services:
@@ -48,13 +53,13 @@ jobs:
         env:
           POSTGRES_USER: app
           POSTGRES_PASSWORD: app
-          POSTGRES_DB: exampleservice
+          POSTGRES_DB: <app>
         ports:
           - 5432:5432
         # Hold the job's steps until Postgres answers, so tests never race a
         # database that is still initializing.
         options: >-
-          --health-cmd "pg_isready -U app -d exampleservice"
+          --health-cmd "pg_isready -U app -d <app>"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
@@ -65,8 +70,9 @@ jobs:
           go-version-file: go.mod
           cache: true
       # The integration suite reads TEST_DATABASE_DSN and skips when it is unset
-      # (see internal/db/postgres_integration_test.go); here it is always set, so
-      # the SQL path is proven. The embedded goose migrations create the schema.
+      # (the reference wires this in internal/db/postgres_integration_test.go);
+      # here it is always set, so the SQL path is proven. The embedded goose
+      # migrations create the schema.
       - run: go test -tags=integration ./...
         env:
-          TEST_DATABASE_DSN: "postgres://app:app@localhost:5432/exampleservice?sslmode=disable"
+          TEST_DATABASE_DSN: "postgres://app:app@localhost:5432/<app>?sslmode=disable"
