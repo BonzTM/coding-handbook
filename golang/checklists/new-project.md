@@ -24,7 +24,7 @@ Bootstrap checklist for a brand-new Go repo using this handbook.
 ## Proof And Delivery
 
 - [ ] Copy the committed [Makefile](../templates/Makefile), [.golangci.yml](../templates/.golangci.yml), and [CI workflow](../templates/github-workflows-ci.yml) into the repo so the gate is identical locally and in CI.
-- [ ] `make verify` is THE baseline gate from day one — it runs tidy, fmt-check, `golangci-lint` (per [../quality/linting.md](../quality/linting.md)), `go vet`, test, race, `govulncheck`, and build. This is mandatory, not an optional `staticcheck` add-on.
+- [ ] `make verify` is THE baseline gate from day one — it runs tidy-check, fmt-check, `golangci-lint` (per [../quality/linting.md](../quality/linting.md)), `go vet`, test, race, `govulncheck`, and build. This is mandatory, not an optional `staticcheck` add-on.
 - [ ] CI runs `make verify` on every push and pull request, with no green build possible while it fails.
 - [ ] A coverage stance is set per [../quality/testing.md](../quality/testing.md): mandatory paths (domain core, error/status mapping, decode paths) are covered and coverage is tracked rather than allowed to silently regress.
 - [ ] `.env.example` exists if the repo has env-driven config.
@@ -33,5 +33,5 @@ Bootstrap checklist for a brand-new Go repo using this handbook.
 ## Verification
 
 ```bash
-make verify   # tidy, fmt-check, lint, vet, test, race, vuln, build
+make verify   # tidy-check, fmt-check, lint, vet, test, race, vuln, build
 ```

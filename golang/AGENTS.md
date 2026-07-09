@@ -120,6 +120,7 @@ Use this when you know what kind of change you are making but not the file set. 
 
 | Goal | Command | Expectation |
 |---|---|---|
+| module hygiene | `go mod tidy -diff` + `go mod verify` (via `make tidy-check`) | no diff; committed module files are tidy |
 | format | `go tool golangci-lint fmt --diff` (via `make fmt-check`; gofumpt + gci) | no diff output |
 | static analysis | `go vet ./...` | exit code 0 |
 | lint | `go tool golangci-lint run` | exit code 0 (policy in [quality/linting.md](quality/linting.md)) |

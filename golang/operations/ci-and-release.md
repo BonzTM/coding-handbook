@@ -8,7 +8,7 @@ Every PR should run a predictable baseline pipeline.
 
 | Stage | Commands | Purpose |
 |---|---|---|
-| module hygiene | `go mod tidy`, `go mod verify` | clean module graph |
+| module hygiene | `go mod tidy -diff`, `go mod verify` (via `make tidy-check`; read-only) | committed go.mod/go.sum are already tidy |
 | formatting | `go tool golangci-lint fmt --diff` (gofumpt + gci, via `make fmt-check`) | consistent source shape |
 | static analysis | `go vet ./...`, `go tool golangci-lint run` (includes `staticcheck`) | catch correctness issues early |
 | tests | `go test ./...`, `go test -race ./...` | functional and concurrency confidence |
