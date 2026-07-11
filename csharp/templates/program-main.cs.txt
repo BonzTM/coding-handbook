@@ -1,0 +1,125 @@
+// Program.cs - the service entrypoint and composition root.
+// Destination: src/<App>.Api/Program.cs (shown here for an app named Orders;
+// replace Orders with your app name).
+//
+// Contract: Program.cs does nothing but wire the process. It is the ONLY file
+// in <App>.Api allowed to reference <App>.Infrastructure directly - endpoints
+// and everything else in Api depend on <App>.Core interfaces, and this file
+// binds those interfaces to Infrastructure implementations. All behavior
+// lives behind the extension methods called below so it can be tested without
+// a real process. Startup fails fast (bad config aborts before listeners
+// open); shutdown is bounded and drains in-flight requests.
+//
+// Top-level statements on purpose: no Program class ceremony, no Startup.cs
+// (that pattern is legacy). WebApplicationFactory<Program> in
+// <App>.IntegrationTests hosts this exact file in-proc.
+
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+
+using Orders.Api.Endpoints;
+using Orders.Api.Telemetry;
+using Orders.Infrastructure;
+using Orders.Infrastructure.Data;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// ---------------------------------------------------------------------------
+// Configuration. CreateBuilder already layered the sources in the handbook's
+// required order - LAST WINS:
+//   appsettings.json (committed, never contains secrets)
+//   appsettings.{Environment}.json
+//   user secrets (Development only, stored outside the repo)
+//   environment variables  <- how real deployments configure the service
+//   command-line args
+// Section names map to env vars with double underscores:
+//   Database:ConnectionString  ->  Database__ConnectionString
+// Nothing to add here; see csharp/foundations/configuration.md.
+// ---------------------------------------------------------------------------
+
+// Options pattern with fail-fast validation. ValidateOnStart runs the
+// DataAnnotations checks while the host starts, so a missing connection
+// string kills the process at deploy time - not on the first request at 3am.
+// One AddOptions block per section; the options types live next to the code
+// that consumes them.
+builder.Services.AddOptions<DatabaseOptions>()
+    .BindConfiguration(DatabaseOptions.SectionName)
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+// Telemetry is one extension, owned by Api/Telemetry/. It wires structured
+// logging, OpenTelemetry (traces + metrics, OTLP exporter), and the health
+// check registrations that /livez and /readyz map below. Program.cs never
+// configures individual exporters inline.
+builder.AddServiceTelemetry();
+
+// RFC 9457 ProblemDetails is the ONLY error shape this service puts on the
+// wire (application/problem+json). requestId is added to every problem so a
+// support ticket can be joined to traces. Validation failures use the
+// standard `errors` extension (field -> messages).
+builder.Services.AddProblemDetails(options =>
+    options.CustomizeProblemDetails = context =>
+        context.ProblemDetails.Extensions["requestId"] = context.HttpContext.TraceIdentifier);
+
+// .NET 10 built-in minimal-API validation: DataAnnotations on request DTOs
+// are enforced before the handler runs and fail as 400 ProblemDetails.
+builder.Services.AddValidation();
+
+// Infrastructure composition: DbContext (Npgsql), repositories, outbound
+// typed clients with resilience handlers. This one call is the Api ->
+// Infrastructure boundary crossing; everything registered maps to a
+// <App>.Core interface.
+builder.Services.AddOrdersInfrastructure(builder.Configuration);
+
+// Bounded shutdown. On SIGTERM the host stops accepting connections, flips
+// readiness, and Kestrel drains in-flight requests; anything still running
+// after this budget is abandoned. Keep it below the orchestrator's grace
+// period (k8s terminationGracePeriodSeconds default 30s) so the drain wins
+// the race against SIGKILL.
+builder.Services.Configure<HostOptions>(options =>
+    options.ShutdownTimeout = TimeSpan.FromSeconds(15));
+
+var app = builder.Build();
+
+// Unhandled exceptions become 500 ProblemDetails (never a stack trace on the
+// wire); bare non-success status codes get a problem body too.
+app.UseExceptionHandler();
+app.UseStatusCodePages();
+
+// ---------------------------------------------------------------------------
+// Health endpoints (csharp/operations/operability.md):
+//   /livez  - liveness: process is up. Predicate excludes every registered
+//             check so it stays cheap and NEVER fails because a dependency is
+//             down (a restart would not fix a dead database).
+//   /readyz - readiness: dependencies reachable. Runs only checks tagged
+//             "ready" (registered inside AddServiceTelemetry). Failing
+//             readiness sheds traffic; it does not restart the pod.
+// ---------------------------------------------------------------------------
+app.MapHealthChecks("/livez", new HealthCheckOptions { Predicate = _ => false });
+app.MapHealthChecks("/readyz", new HealthCheckOptions
+{
+    Predicate = registration => registration.Tags.Contains("ready"),
+});
+
+// Endpoint groups - one Map*Endpoints extension per resource, defined in
+// Api/Endpoints/. Program.cs only lists them; routes, filters, and handlers
+// live with the group (csharp/services/http-services.md).
+app.MapOrderEndpoints();
+// app.MapPaymentEndpoints();  // <- add one line per new endpoint group
+
+// ---------------------------------------------------------------------------
+// Explicit migration step. Migrations NEVER run on normal startup - replicas
+// racing to alter the schema is an outage generator. Deployments run this as
+// an init step (or one-off job), then start the service without the flag:
+//   dotnet Orders.Api.dll --migrate
+// ---------------------------------------------------------------------------
+if (args.Contains("--migrate", StringComparer.Ordinal))
+{
+    await app.MigrateOrdersDatabaseAsync();
+    return;
+}
+
+app.Run();
+
+// Expose the entry point class to WebApplicationFactory<Program> in
+// integration tests (top-level statements generate an internal Program).
+public partial class Program;

@@ -1,0 +1,76 @@
+# Release gate. Builds and publishes the container image when a release tag is
+# pushed. CI (ci.yml) proves every commit; this workflow re-proves the tagged
+# commit with the same gate and then packages it — the tag/version rules and
+# the release checklist live in ../operations/ci-and-release.md and
+# ../checklists/release.md.
+#
+# Registry: which registry you publish to is a spec-intake question; GitHub's
+# ghcr.io is the placeholder default here because the GITHUB_TOKEN can push to
+# it with no extra secrets. Swap the login step and image name for ECR/GCR/etc.
+#
+# NOT on GitHub? The portable contract is "on tag v*, run `pwsh ./verify.ps1`,
+# then docker build with VERSION/COMMIT build-args and push the version-tagged
+# image". Replicate that in your CI of choice; everything below is GitHub
+# plumbing.
+#
+# Destination: .github/workflows/release.yml
+
+name: release
+
+on:
+  push:
+    tags: ["v*"] # release tags: v1.2.3 (the v prefix is required)
+
+# Least privilege: read source, write packages (the image push). Nothing else.
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json # single source of truth for the SDK version
+          cache: true
+          cache-dependency-path: "**/packages.lock.json"
+
+      # Re-run the full gate on the tagged commit: restore (locked),
+      # format-check, build (warnings-as-errors), test, audit. A tag on a
+      # commit that cannot pass the gate must not become an image.
+      - run: ./verify.ps1
+        shell: pwsh
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Derives the image tag from the pushed git tag (v1.2.3 -> :v1.2.3) and
+      # generates the OCI labels (source, revision, created, version), so the
+      # running assembly's InformationalVersion, the image labels, and the VCS
+      # tag all agree.
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/<org>/<repo>
+
+      # Build with the metadata the Dockerfile's ARGs expect (VERSION, COMMIT —
+      # see the committed Dockerfile template; it stamps them into the published
+      # assembly's InformationalVersion). Labels come from the metadata step.
+      - name: Build and push image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ github.ref_name }}
+            COMMIT=${{ github.sha }}

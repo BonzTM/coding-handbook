@@ -1,0 +1,98 @@
+# CI gate. The single source of truth is the committed verify.ps1: this workflow
+# is a thin caller that runs the SAME `pwsh ./verify.ps1` you run locally.
+# Contract and stage details: ../operations/ci-and-release.md
+#
+# NOT on GitHub? Replicate the one meaningful step (`pwsh ./verify.ps1`) in your
+# CI of choice (GitLab CI, Buildkite, etc.). verify.ps1 is the portable
+# contract; everything below is just GitHub-specific plumbing around it.
+#
+# Destination: .github/workflows/ci.yml
+
+name: ci
+
+on:
+  push:
+    branches: [main] # default branch only; PR builds cover the rest
+  pull_request:
+
+# Least privilege. Read source; grant nothing else. Add scopes per-job only when
+# a job genuinely needs them (e.g. release publishing).
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    # Cross-platform is a handbook mandate (../foundations/cross-platform.md):
+    # devs run Windows, macOS, and Linux, and prod is Linux containers, so the
+    # SAME gate must pass on all three. The ubuntu leg also catches
+    # case-sensitivity bugs that Windows/macOS filesystems hide.
+    strategy:
+      fail-fast: false # let all three legs report; an OS-specific break is the finding
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json # single source of truth for the SDK version
+          # NuGet package cache, keyed off the committed per-project
+          # packages.lock.json files (RestorePackagesWithLockFile is on in
+          # Directory.Build.props, so every project has one).
+          cache: true
+          cache-dependency-path: "**/packages.lock.json"
+      # The entire gate: restore (locked), format-check, build
+      # (warnings-as-errors), test, audit. pwsh is preinstalled on all
+      # GitHub-hosted runners, so one script covers the whole matrix.
+      - run: ./verify.ps1
+        shell: pwsh
+
+  # Second gate: prove the real SQL path, not just the unit suite. 'verify'
+  # above is the OFFLINE gate (no network, no DB) and stays the required check.
+  # This job runs the integration test projects against a real Postgres, so the
+  # database path the service ships is exercised in CI instead of only at
+  # deploy time.
+  #
+  # NOT on GitHub? The portable contract is "run `pwsh ./verify.ps1
+  # -Integration` on a machine with Docker or a reachable throwaway Postgres".
+  # Replicate that in your CI of choice; the rest is GitHub plumbing.
+  #
+  # This job is for database-backed services only. DELETE it for shapes with no
+  # database (CLI, library, queue-only worker). Replace <app> with the database
+  # name you pick — any throwaway name works; it only has to match the health
+  # check and the connection string below.
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: <app>
+        ports:
+          - 5432:5432
+        # Hold the job's steps until Postgres answers, so tests never race a
+        # database that is still initializing.
+        options: >-
+          --health-cmd "pg_isready -U app -d <app>"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: "**/packages.lock.json"
+      # The integration suite reads TEST_DATABASE_CONNECTION and provisions its
+      # own Testcontainers Postgres when it is unset (the local-dev path —
+      # see ../quality/testing.md). Setting it here pins the whole suite to the
+      # single service container above: same coverage, no per-class container
+      # spin-up, deterministic image version. EF Core migrations create the
+      # schema as part of the suite's fixture setup.
+      - run: ./verify.ps1 -Integration
+        shell: pwsh
+        env:
+          TEST_DATABASE_CONNECTION: "Host=localhost;Port=5432;Database=<app>;Username=app;Password=app"
