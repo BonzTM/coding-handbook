@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- Thin host: composition root, endpoint groups, wire DTOs, middleware,
+       telemetry wiring. Depends on Core interfaces everywhere; references
+       Infrastructure ONLY so Program.cs can compose it
+       (csharp/foundations/solution-and-project-design.md). -->
+
+  <ItemGroup>
+    <ProjectReference Include="../Orders.Core/Orders.Core.csproj" />
+    <ProjectReference Include="../Orders.Infrastructure/Orders.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- JWT bearer authentication against the issuer's JWKS. -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <!-- OpenTelemetry: one AddServiceTelemetry() extension wires all three
+         signals with OTLP export (csharp/operations/observability.md). -->
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Orders.UnitTests" />
+    <!-- The integration suite boots the host via WebApplicationFactory<Program>;
+         Program is internal (CA1515: app assemblies expose nothing publicly). -->
+    <InternalsVisibleTo Include="Orders.IntegrationTests" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,115 @@
+<!--
+  Directory.Build.props - repo-wide MSBuild defaults. Lives at the repo root,
+  next to the .slnx file; every project underneath inherits these settings.
+
+  Per-project .csproj files stay near-empty: SDK line, project references,
+  package references (versions come from Directory.Packages.props), and the
+  rare project-specific property. Anything repeated across two csproj files
+  belongs here instead.
+
+  Analyzer policy and severities:  csharp/quality/linting.md  (+ .editorconfig)
+  Package/version policy:          Directory.Packages.props
+  Verification gate:               pwsh ./verify.ps1
+-->
+<Project>
+
+  <!-- ======================================================================
+       Target framework and language.
+       ====================================================================== -->
+  <PropertyGroup>
+    <!-- .NET 10 LTS only. STS releases require an ADR. -->
+    <TargetFramework>net10.0</TargetFramework>
+
+    <!-- No <LangVersion> on purpose: the SDK default for net10.0 is C# 14,
+         which is exactly what we want. Pinning LangVersion separately from
+         TargetFramework is how projects drift into unsupported combinations. -->
+
+    <!-- Nullable reference types are non-negotiable in new code. Warnings
+         become errors below, so a nullability violation fails the build. -->
+    <Nullable>enable</Nullable>
+
+    <!-- Implicit usings keep files focused on the usings that carry meaning. -->
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <!-- ======================================================================
+       Warnings and analyzers. The compiler and analyzers are the first
+       verification gate; nothing ships with open warnings.
+       ====================================================================== -->
+  <PropertyGroup>
+    <!-- Every warning is an error, everywhere, from day one. Suppress a rule
+         narrowly in .editorconfig (with a written reason) rather than
+         loosening this switch. Policy: ../quality/linting.md -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <!-- Latest analyzer wave, all categories enabled. Individual rule
+         severities are tuned in .editorconfig, which is the single source of
+         truth for style and severity. -->
+    <AnalysisLevel>latest-all</AnalysisLevel>
+
+    <!-- IDE style (IDE####) rules run in the build, not only in the editor,
+         so `dotnet build` and CI see the same diagnostics as the IDE. -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <!-- Required for IDE0005 (remove unnecessary usings) to fire in the BUILD;
+         without it the compiler emits the EnableGenerateDocumentationFile
+         diagnostic, which warnings-as-errors turns into a hard failure. The
+         companion CS1591 policy (missing XML docs) lives in .editorconfig:
+         off for services, warning for libraries
+         (../foundations/style-and-review.md). -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <!-- ======================================================================
+       Package hygiene: locked restore + vulnerability audit.
+       ====================================================================== -->
+  <PropertyGroup>
+    <!-- Every project writes packages.lock.json (committed). CI restores in
+         locked mode (the locked-mode restore flag; see verify.ps1) so the
+         dependency graph cannot drift silently between laptop and build
+         machine. -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+
+    <!-- NuGetAudit runs on every restore and checks direct AND transitive
+         packages against known advisories. `high` fails restore on high and
+         critical findings; lower severities surface as warnings. -->
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <NuGetAuditLevel>high</NuGetAuditLevel>
+  </PropertyGroup>
+
+  <!-- ======================================================================
+       Output layout: the .NET 8+ artifacts layout. All build output goes to
+       a single root-level artifacts/ directory instead of per-project bin/
+       and obj/ trees. One directory to clean, one directory to gitignore,
+       one directory for CI to cache or collect.
+       Property names per learn.microsoft.com/dotnet/core/sdk/artifacts-output.
+       ====================================================================== -->
+  <PropertyGroup>
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+    <!-- Default location is $(RepoRoot)/artifacts. Uncomment to relocate:
+    <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
+    -->
+  </PropertyGroup>
+
+  <!-- ======================================================================
+       Globalization. Services that touch user data need real ICU behavior:
+       culture-aware collation, IANA time-zone mapping on Windows, correct
+       casing outside ASCII. Keep invariant mode OFF and be explicit with
+       CultureInfo.InvariantCulture / StringComparison.Ordinal at each call
+       site instead (see ../foundations/cross-platform.md). Flip to true only
+       for tools that provably never touch user-facing text, via ADR.
+       ====================================================================== -->
+  <PropertyGroup>
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <!-- ======================================================================
+       Deterministic and CI builds. Deterministic compilation is the SDK
+       default - do not turn it off. ContinuousIntegrationBuild normalizes
+       recorded file paths for reproducible, SourceLink-friendly binaries but
+       breaks local debugging paths, so it is set BY CI ONLY:
+           dotnet build -c Release -p:ContinuousIntegrationBuild=true
+       Do not hardcode it here.
+       ====================================================================== -->
+
+</Project>

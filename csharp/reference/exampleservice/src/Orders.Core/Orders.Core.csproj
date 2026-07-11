@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Domain project: entities, ports (interfaces), business rules.
+       References NOTHING app-level - no ASP.NET Core, no EF Core, no broker
+       (csharp/foundations/solution-and-project-design.md). TargetFramework,
+       nullable, analyzers, and lock-file settings all inherit from
+       Directory.Build.props. -->
+
+  <ItemGroup>
+    <!-- The matching test project may exercise internal members; nothing else. -->
+    <InternalsVisibleTo Include="Orders.UnitTests" />
+  </ItemGroup>
+
+</Project>

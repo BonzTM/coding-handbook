@@ -1,0 +1,96 @@
+# Local stack for a handbook HTTP+Postgres service: the service plus the one
+# dependency it cannot run without. Contract: ../operations/deployment.md
+# (the same image, probes, runtime limits, and config keys live there).
+#
+# Destination: docker-compose.yml (repo root).
+#
+# This is the copyable LOCAL stack, not a production manifest — the production
+# rollout (resource limits, secret store, probes, HPA) lives in the committed
+# k8s-deployment.yaml. Compose wires the service to a real Postgres so the SQL
+# path (and the integration suite) can be exercised the way CI does.
+#
+# Bring it up:   docker compose up --build
+# Tear it down:  docker compose down -v   (the -v drops the Postgres volume)
+#
+# Replace "Orders"/"orders" with your app name throughout.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      # These three seed the database on first boot; the service reads the
+      # composed connection string below, not these, so keep them in sync by hand.
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: orders
+    ports:
+      # Exposed for local psql / pointing the integration suite's
+      # TEST_DATABASE_CONNECTION at this instance instead of Testcontainers.
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # depends_on: service_healthy below blocks the migrate step until this
+      # passes, so migrations never race a database that is still initializing.
+      test: ["CMD-SHELL", "pg_isready -U app -d orders"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  # Explicit migration step: same image, run-and-exit with --migrate. This is
+  # the compose counterpart of the k8s migration Job — the handbook forbids
+  # auto-migrating on normal startup even locally, so the ordering (migrate,
+  # THEN serve) is the same one production uses. See ../services/database.md.
+  migrate:
+    build:
+      context: .
+      args:
+        VERSION: 0.0.0-dev
+        COMMIT: local
+    # Appended to the image ENTRYPOINT: runs `dotnet Orders.Api.dll --migrate`.
+    command: ["--migrate"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=orders;Username=app;Password=app"
+    restart: "no" # a failed migration needs a human, not a retry loop
+
+  service:
+    build:
+      context: .
+      # Stamp build metadata the same way the Dockerfile/CI does.
+      args:
+        VERSION: 0.0.0-dev
+        COMMIT: local
+    depends_on:
+      postgres:
+        # Wait for the healthcheck, not just container start.
+        condition: service_healthy
+      migrate:
+        # Serve only after the schema is current — mirrors the prod pipeline.
+        condition: service_completed_successfully
+    environment:
+      # The one dependency wiring: point the service at the compose Postgres.
+      # Env vars override appsettings.json (":" becomes "__" in env names);
+      # plaintext in-network dev credentials, never production.
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=orders;Username=app;Password=app"
+      # Development turns on the developer exception page and human-readable
+      # console logs (JSON in production).
+      ASPNETCORE_ENVIRONMENT: Development
+      Logging__LogLevel__Default: Debug
+      # The image already listens on 8080 (ASPNETCORE_HTTP_PORTS=8080); set
+      # ASPNETCORE_URLS here only if you need a different bind.
+      # OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"  # when running a local collector
+    ports:
+      - "8080:8080"
+    # No compose healthcheck on the service itself: the chiseled runtime image
+    # has no shell, curl, or wget to probe /readyz with, and the service ships
+    # no health-check subcommand. The real readiness gate is the Kubernetes
+    # readiness probe in k8s-deployment.yaml (httpGet /readyz); locally just
+    # hit GET http://localhost:8080/readyz yourself. Postgres carries the only
+    # healthcheck here because depends_on needs it.
+
+volumes:
+  pgdata:
