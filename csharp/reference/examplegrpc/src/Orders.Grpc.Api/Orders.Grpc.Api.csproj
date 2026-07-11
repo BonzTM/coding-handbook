@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- Thin gRPC host: composition root, generated wire types, interceptors,
+       error mapping, TLS gating, telemetry wiring. Domain logic lives in
+       Orders.Grpc.Core (csharp/foundations/solution-and-project-design.md). -->
+
+  <ItemGroup>
+    <ProjectReference Include="../Orders.Grpc.Core/Orders.Grpc.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The versioned wire contract. Grpc.Tools (carried by Grpc.AspNetCore)
+         generates stubs into obj/ at build time - never committed, never
+         hand-edited (csharp/services/grpc-services.md). GrpcServices="Both"
+         also generates the client so the in-proc transport tests exercise the
+         contract through the real generated client instead of maintaining a
+         second, drift-prone copy of the generated types. -->
+    <Protobuf Include="../../api/orders/v1/*.proto"
+              ProtoRoot="../../api"
+              GrpcServices="Both" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- gRPC server on Kestrel (+ Grpc.Tools + Google.Protobuf). -->
+    <PackageReference Include="Grpc.AspNetCore" />
+    <!-- grpc.health.v1 bridged to the same health-check registrations as
+         /livez and /readyz - one set of checks, two transports. -->
+    <PackageReference Include="Grpc.AspNetCore.HealthChecks" />
+    <!-- Server reflection so grpcurl works without local protos. -->
+    <PackageReference Include="Grpc.AspNetCore.Server.Reflection" />
+    <!-- google.rpc.Status/BadRequest error details + ToRpcException(). -->
+    <PackageReference Include="Grpc.StatusProto" />
+    <!-- OpenTelemetry: one AddServiceTelemetry() extension wires all three
+         signals with OTLP export (csharp/operations/observability.md). -->
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The unit-test suite boots the host via WebApplicationFactory<Program>
+         and unit-tests interceptors/mapping; Program and the internals are
+         visible to it only (CA1515: app assemblies expose nothing publicly). -->
+    <InternalsVisibleTo Include="Orders.Grpc.UnitTests" />
+  </ItemGroup>
+
+</Project>

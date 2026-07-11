@@ -1,0 +1,83 @@
+<!--
+  Directory.Packages.props - Central Package Management (CPM). Lives at the
+  repo root next to Directory.Build.props. This file is the ONLY place a
+  package version appears; .csproj files use bare
+  <PackageReference Include="Name" /> with no Version attribute.
+
+  Rules:
+    - One version per package for the whole repo. Version conflicts between
+      projects are a design smell, not a feature.
+    - Bump versions via the dependency-upgrade flow (../recipes/bump-dependency.md),
+      then re-run `pwsh ./verify.ps1` so packages.lock.json files regenerate.
+    - New packages need the dependency checklist in ../foundations/project-setup.md:
+      maintenance health, license, advisory status, transitive weight.
+    - This copy is trimmed to what examplegrpc actually uses (per the template's
+      own "delete the groups your app does not use" rule): no EF Core, no
+      Testcontainers, no CLI parsing - this module has no database.
+
+  Versions: the OpenTelemetry/testing pins match csharp/templates/
+  Directory.Packages.props (verified 2026-07-10); the gRPC family below was
+  verified against nuget.org on 2026-07-11.
+-->
+<Project>
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <!-- ======================================================================
+       gRPC server stack (../services/grpc-services.md). All grpc-dotnet
+       packages ride the same release train - keep them on one version.
+       ====================================================================== -->
+  <ItemGroup>
+    <!-- Meta-package: Grpc.AspNetCore.Server + Grpc.Tools (build-time protoc,
+         generates into obj/, nothing committed) + Google.Protobuf. -->
+    <PackageVersion Include="Grpc.AspNetCore" Version="2.80.0" />
+    <!-- grpc.health.v1 service bridged to Microsoft.Extensions.Diagnostics.
+         HealthChecks - one set of checks, two transports. -->
+    <PackageVersion Include="Grpc.AspNetCore.HealthChecks" Version="2.80.0" />
+    <!-- Server reflection so grpcurl works without local protos. -->
+    <PackageVersion Include="Grpc.AspNetCore.Server.Reflection" Version="2.80.0" />
+    <!-- Richer error model: Google.Rpc.Status + BadRequest details and the
+         ToRpcException()/GetRpcStatus()/GetDetail<T>() bridge. Carries
+         Google.Api.CommonProtos transitively. -->
+    <PackageVersion Include="Grpc.StatusProto" Version="2.80.0" />
+  </ItemGroup>
+
+  <!-- ======================================================================
+       Telemetry: OpenTelemetry SDK + OTLP exporter + instrumentation.
+       Wired once in AddServiceTelemetry() (../operations/observability.md).
+       AspNetCore instrumentation covers gRPC server spans/metrics - gRPC
+       needs no extra instrumentation package.
+       ====================================================================== -->
+  <ItemGroup>
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.16.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.16.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.16.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.16.0" />
+  </ItemGroup>
+
+  <!-- ======================================================================
+       Testing: xUnit v3 on Microsoft.Testing.Platform (MTP).
+       Test .csproj files also set:
+         <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+         <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+       xunit.v3 ships its own MTP runner - no extra runner package is
+       required for `dotnet test` (../quality/testing.md).
+       ====================================================================== -->
+  <ItemGroup>
+    <PackageVersion Include="xunit.v3" Version="3.2.2" />
+    <!-- In-proc host for transport tests: WebApplicationFactory<TProgram>;
+         the gRPC client rides its TestServer handler. -->
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.9" />
+    <!-- GrpcChannel for in-proc calls against the TestServer. -->
+    <PackageVersion Include="Grpc.Net.Client" Version="2.80.0" />
+    <!-- Generated grpc.health.v1 client - proves the health service serves. -->
+    <PackageVersion Include="Grpc.HealthCheck" Version="2.80.0" />
+    <!-- Generated reflection client - proves reflection is registered. -->
+    <PackageVersion Include="Grpc.Reflection" Version="2.80.0" />
+    <!-- FakeTimeProvider - deterministic time in tests (../foundations/time.md). -->
+    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.7.0" />
+  </ItemGroup>
+
+</Project>
