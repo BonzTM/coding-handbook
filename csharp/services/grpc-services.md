@@ -31,6 +31,7 @@ package orders.v1;
 option csharp_namespace = "Orders.Api.Grpc.V1";
 ```
 
+- `csharp_namespace` is `<host root namespace>.Grpc.V1` — collapse any doubled segment (a host already named `Orders.Grpc.Api` uses `Orders.Grpc.Api.V1`, not `Orders.Grpc.Api.Grpc.V1`) and note the choice in the proto file.
 - Keep messages and services small and explicit. Proto files are transport contracts, not database tables.
 - Proto package versioning is separate from release versioning. `orders.v1` states wire compatibility; the NuGet/container release version states what shipped. Breaking a wire contract means a new proto package (`orders.v2`), not a new release number. See [../foundations/contracts-and-compatibility.md](../foundations/contracts-and-compatibility.md).
 
@@ -82,6 +83,7 @@ builder.Services.AddGrpc(options =>
 ```
 
   Logging sits outermost so it records the status the client actually saw; exception mapping sits innermost so every interceptor above it observes a proper `RpcException`, not a raw domain exception. Tracing is not an interceptor — OpenTelemetry's ASP.NET Core instrumentation already covers gRPC calls ([../operations/observability.md](../operations/observability.md)).
+  A global `AuthInterceptor` also intercepts the health and reflection services — which must serve without credentials (the kubelet and `grpcurl` do not authenticate). Exempt exactly those service prefixes (`/grpc.health.v1.Health/`, `/grpc.reflection.`) inside the interceptor, fail-closed for everything else; see the reference implementation in [../reference/examplegrpc/](../reference/examplegrpc/).
 - Deadlines: clients set them, servers respect them. `context.CancellationToken` fires on client cancellation *and* deadline expiry — pass it through every Core and I/O call ([../foundations/cancellation-and-async.md](../foundations/cancellation-and-async.md)). For service-to-service fan-out, register clients through the gRPC client factory with `EnableCallContextPropagation()` so the inbound deadline and cancellation flow to outbound calls automatically. Servers still protect themselves from unbounded work; a missing client deadline is not permission to run forever.
 - Expose the gRPC health service for deployability, and reflection so `grpcurl` works without local protos:
 
@@ -94,7 +96,7 @@ app.MapGrpcHealthChecksService();
 app.MapGrpcReflectionService(); // internal services; config-gate off at public edges
 ```
 
-  `AddGrpcHealthChecks` reuses the same `Microsoft.Extensions.Diagnostics.HealthChecks` registrations as `/livez` and `/readyz` — one set of checks, two transports.
+  `AddGrpcHealthChecks` reuses the same `Microsoft.Extensions.Diagnostics.HealthChecks` registrations as `/livez` and `/readyz` — one set of checks, two transports. Register at least one check (a trivial `"self"` check for a dependency-free service): with zero registrations the HTTP endpoints return `200` but the gRPC health service answers `UNKNOWN`, not `SERVING`.
 
 ### Error Details
 
@@ -148,7 +150,7 @@ gRPC over HTTP/2 must run on TLS in production; plaintext (h2c) is for local dev
 }
 ```
 
-  Kestrel refuses to start when a configured certificate fails to load — that fail-fast is the contract. Never catch it and fall back to plaintext. Enforce a TLS minimum via `HttpsConnectionAdapterOptions.SslProtocols` (TLS 1.2 or later).
+  Kestrel refuses to start when a configured certificate fails to load — that fail-fast is the contract. Never catch it and fall back to plaintext. Enforce a TLS minimum via `HttpsConnectionAdapterOptions.SslProtocols` (TLS 1.2 or later) — and note CA5398 flags any hardcoded `SslProtocols` value, so this floor needs a narrow justified `#pragma warning disable CA5398` per the suppression policy in [../quality/linting.md](../quality/linting.md).
 - **mTLS for internal service-to-service traffic** unless a service mesh terminates TLS for you. When a client-CA bundle is configured, require and verify the client certificate:
 
 ```csharp

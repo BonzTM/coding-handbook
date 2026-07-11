@@ -43,6 +43,12 @@
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.9" />
     <!-- OptionsBuilder.ValidateDataAnnotations for the same class libraries. -->
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.9" />
+    <!-- BackgroundService/IHostedService in class libraries that host worker
+         logic without referencing the ASP.NET shared framework. -->
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.9" />
+    <!-- Health-check registrations from class libraries (the host maps
+         /livez + /readyz; Infrastructure contributes its checks). -->
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.9" />
   </ItemGroup>
 
   <!-- ======================================================================
@@ -99,6 +105,25 @@
     <PackageVersion Include="NSubstitute" Version="5.3.0" />
     <!-- Real PostgreSQL in integration tests, behind the -Integration switch. -->
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.13.0" />
+  </ItemGroup>
+
+  <!-- ======================================================================
+       gRPC (gRPC services only): Grpc.AspNetCore bundles Grpc.Tools for
+       build-time codegen from api/*.proto - no committed stubs
+       (../services/grpc-services.md). Client/HealthCheck/Reflection packages
+       serve GrpcChannel-based tests and tooling. grpc-dotnet family versions
+       move together - verified on nuget.org 2026-07-11.
+       ====================================================================== -->
+  <ItemGroup>
+    <PackageVersion Include="Grpc.AspNetCore" Version="2.80.0" />
+    <PackageVersion Include="Grpc.AspNetCore.HealthChecks" Version="2.80.0" />
+    <PackageVersion Include="Grpc.AspNetCore.Server.Reflection" Version="2.80.0" />
+    <!-- google.rpc.Status error-details model built in the exception-mapping
+         interceptor - the handbook's gRPC error contract. -->
+    <PackageVersion Include="Grpc.StatusProto" Version="2.80.0" />
+    <PackageVersion Include="Grpc.Net.Client" Version="2.80.0" />
+    <PackageVersion Include="Grpc.HealthCheck" Version="2.80.0" />
+    <PackageVersion Include="Grpc.Reflection" Version="2.80.0" />
   </ItemGroup>
 
   <!-- ======================================================================

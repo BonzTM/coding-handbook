@@ -34,7 +34,7 @@ repo/
 
 Project references are the boundary mechanism, not folder conventions: `Orders.Core` references nothing app-level, `Orders.Api` and `Orders.Infrastructure` reference Core, and Api reaches Infrastructure only from the `Program.cs` composition root. A missing `<ProjectReference>` makes a violation a build error rather than a review comment. The bootstrap commands and full tree live in [foundations/project-setup.md](foundations/project-setup.md); the reference-direction table lives in [foundations/solution-and-project-design.md](foundations/solution-and-project-design.md).
 
-Compiling reference modules that embody this architecture end to end are planned as phase 2; until they land, [templates/README.md](templates/README.md) is the canonical scaffolding and the only home of exact version pins.
+Three compiling, `verify.ps1`-green reference modules embody this architecture end to end: [reference/exampleservice/](reference/exampleservice/) (HTTP+Postgres, the keystone), [reference/examplegrpc/](reference/examplegrpc/) (gRPC), and [reference/exampleworker/](reference/exampleworker/) (event-driven worker). Their committed scaffolding is the proven form of [templates/](templates/); exact version pins live in both, nowhere else.
 
 ## Two-Speed Documentation Model
 
