@@ -1,0 +1,190 @@
+# Kubernetes manifests for a handbook HTTP+Postgres service. Contract:
+# ../operations/deployment.md — this file is the concrete rollout the
+# "Container Runtime Limits", "Health Probes", and "Graceful Shutdown And
+# Termination" sections describe. Where the prose and this file disagree, the
+# prose wins; keep them in sync.
+#
+# Destination: k8s/ (one file per logical object is also fine; kept together
+# here so the deploy unit reads top to bottom).
+#
+# Replace: ghcr.io/<org>/<repo> image + tag, the "orders" names, the Secret
+# name, and the resource numbers (sized from your load tests, not copied
+# blindly).
+---
+# Pre-rollout database migration Job. The deploy pipeline runs this Job to
+# completion BEFORE rolling the Deployment below, so the schema is current when
+# the first new pod takes traffic — the handbook forbids auto-migrating on
+# normal startup (../services/database.md). Same image as the app; the args
+# append to the image ENTRYPOINT, so the container runs
+# `dotnet Orders.Api.dll --migrate` — a run-and-exit path over the same EF Core
+# migrations the app ships. DELETE this Job for shapes without a database.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: orders-migrate
+  labels:
+    app.kubernetes.io/name: orders
+spec:
+  # Fail fast: a migration that errors twice needs a human, not more retries.
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: orders
+    spec:
+      # Never restart in place; a failed attempt surfaces as a failed Job the
+      # pipeline stops on, instead of a silent crash loop.
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          # SAME image + tag as the Deployment below; bump both together so the
+          # schema this Job applies is the one the rolled-out code expects.
+          image: ghcr.io/<org>/<repo>:v1.2.3
+          args: ["--migrate"]
+          env:
+            # Same runtime secret injection as the app container: the
+            # connection string comes from the platform secret store, never the
+            # image. ":" in config paths becomes "__" in env-var names.
+            - name: ConnectionStrings__Default
+              valueFrom:
+                secretKeyRef:
+                  name: orders-db
+                  key: connectionString
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders
+  labels:
+    app.kubernetes.io/name: orders
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: orders
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: orders
+    spec:
+      # The host's HostOptions.ShutdownTimeout (set in Program.cs; see the
+      # program-main template) must stay UNDER this platform grace, or the
+      # kubelet sends SIGKILL mid-drain. Budget: readiness flips not-ready, the
+      # LB stops routing, Kestrel drains in-flight requests, THEN the process
+      # exits — all inside these 30s. See deployment.md (Graceful Shutdown And
+      # Termination).
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        # Pod-level nonroot stance. The chiseled image already runs as the
+        # non-root `app` user (UID 1654); these make the platform enforce it
+        # regardless of the image.
+        runAsNonRoot: true
+        runAsUser: 1654
+        runAsGroup: 1654
+        fsGroup: 1654
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: orders
+          # Pin to an immutable tag (release tag + SHA), never :latest, so a
+          # rollback is reproducible (deployment.md, Image Identity).
+          image: ghcr.io/<org>/<repo>:v1.2.3
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080 # the aspnet image default (ASPNETCORE_HTTP_PORTS=8080)
+          securityContext:
+            allowPrivilegeEscalation: false
+            # The app writes nothing to its own filesystem. If a feature needs
+            # scratch space (request buffering, temp files), mount an emptyDir
+            # at /tmp instead of loosening this.
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          # No GOMEMLIMIT/GOMAXPROCS-style pair to keep in sync: the .NET
+          # runtime is container-aware — the GC sizes its heap from the cgroup
+          # memory limit and Environment.ProcessorCount follows the CPU limit.
+          # Tune only when measurements demand it (e.g.
+          # DOTNET_GCHeapHardLimitPercent), and record why.
+          env:
+            # The connection string is injected from the platform secret store
+            # at RUNTIME, never baked into the image (deployment.md, Secrets
+            # And Config Injection).
+            - name: ConnectionStrings__Default
+              valueFrom:
+                secretKeyRef:
+                  name: orders-db
+                  key: connectionString
+            # Production environment: JSON console logs, no developer
+            # exception page. (Production is also the default when unset;
+            # explicit beats implicit in a manifest.)
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Production"
+            # Where telemetry goes; see ../operations/observability.md.
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector.observability:4317"
+          resources:
+            # Requests = steady-state; limits = ceiling. The runtime derives
+            # its GC heap budget and processor count from these limits.
+            requests:
+              cpu: "500m"
+              memory: "256Mi"
+            limits:
+              cpu: "1"
+              memory: "512Mi"
+          # Liveness: process-up ONLY. Must not check downstreams, or a
+          # database blip becomes a restart loop (deployment.md, Health
+          # Probes). Maps to the health-checks pipeline's /livez endpoint.
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          # Readiness: dependency-aware. A pod whose database is unreachable is
+          # pulled from rotation instead of serving errors.
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orders
+  labels:
+    app.kubernetes.io/name: orders
+spec:
+  selector:
+    app.kubernetes.io/name: orders
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+# Horizontal scaling on CPU. Tune the target and bounds from load/soak numbers
+# (../quality/testing.md), not by reflex.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: orders
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: orders
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

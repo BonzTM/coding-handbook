@@ -1,0 +1,99 @@
+<!--
+  Directory.Packages.props - Central Package Management (CPM). Lives at the
+  repo root next to Directory.Build.props. This file is the ONLY place a
+  package version appears; .csproj files use bare
+  <PackageReference Include="Name" /> with no Version attribute.
+
+  Rules:
+    - One version per package for the whole repo. Version conflicts between
+      projects are a design smell, not a feature.
+    - Bump versions via the dependency-upgrade flow (../recipes/bump-dependency.md),
+      then re-run `pwsh ./verify.ps1` so packages.lock.json files regenerate.
+    - New packages need the dependency checklist in ../foundations/project-setup.md:
+      maintenance health, license, advisory status, transitive weight.
+    - Delete the groups your app does not use (a CLI needs no ASP.NET testing
+      packages); keep the comments for the groups you keep.
+
+  Versions below were verified against nuget.org on 2026-07-10.
+-->
+<Project>
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <!-- ======================================================================
+       Runtime building blocks: outbound HTTP resilience and caching.
+       ====================================================================== -->
+  <ItemGroup>
+    <!-- Standard resilience handler for IHttpClientFactory typed clients:
+         retry + circuit breaker + timeout in one pipeline. Every outbound
+         HTTP client gets one (../operations/resilience.md). -->
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.7.0" />
+    <!-- HybridCache: in-proc L1 by default, distributed L2 (Redis/Valkey)
+         when configured. The handbook's default cache (../services/caching.md). -->
+    <PackageVersion Include="Microsoft.Extensions.Caching.Hybrid" Version="10.7.0" />
+  </ItemGroup>
+
+  <!-- ======================================================================
+       Data access: EF Core + Npgsql provider. Design is needed only by the
+       project that hosts migrations; reference it PrivateAssets="all".
+       ====================================================================== -->
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+  </ItemGroup>
+
+  <!-- ======================================================================
+       Telemetry: OpenTelemetry SDK + OTLP exporter + instrumentation.
+       Wired once in AddServiceTelemetry() (../operations/observability.md).
+       ====================================================================== -->
+  <ItemGroup>
+    <PackageVersion Include="OpenTelemetry" Version="1.16.0" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.16.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.16.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.16.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.16.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.16.0" />
+  </ItemGroup>
+
+  <!-- ======================================================================
+       Testing: xUnit v3 on Microsoft.Testing.Platform (MTP).
+       Test .csproj files also set:
+         <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+         <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+       xunit.v3 ships its own MTP runner - no extra runner package is
+       required for `dotnet test` (../quality/testing.md).
+       ====================================================================== -->
+  <ItemGroup>
+    <PackageVersion Include="xunit.v3" Version="3.2.2" />
+    <!-- VSTest-protocol compatibility for IDEs/pipelines that have not moved
+         to MTP yet. Harmless alongside the MTP runner; drop when unneeded. -->
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <!-- Optional MTP extensions: TRX report files and code coverage (the
+         report-trx and coverage options after `dotnet test`'s argument
+         separator). -->
+    <PackageVersion Include="Microsoft.Testing.Extensions.TrxReport" Version="2.3.1" />
+    <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.9.0" />
+    <!-- In-proc HTTP tests via WebApplicationFactory<TProgram>. -->
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.9" />
+    <!-- FakeTimeProvider - deterministic time in tests (../foundations/time.md). -->
+    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.7.0" />
+    <!-- Mocking fallback when a hand-rolled fake is too costly. Moq and
+         FluentAssertions are forbidden (../quality/testing.md). -->
+    <PackageVersion Include="NSubstitute" Version="5.3.0" />
+    <!-- Real PostgreSQL in integration tests, behind the -Integration switch. -->
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.13.0" />
+  </ItemGroup>
+
+  <!-- ======================================================================
+       CLI parsing (CLI apps only): System.CommandLine 2.0 GA - the
+       SetAction API, not the pre-GA SetHandler API.
+       ====================================================================== -->
+  <ItemGroup>
+    <PackageVersion Include="System.CommandLine" Version="2.0.9" />
+  </ItemGroup>
+
+</Project>
