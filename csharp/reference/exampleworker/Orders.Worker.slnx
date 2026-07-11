@@ -1,0 +1,16 @@
+<!--
+  Orders.Worker.slnx - the XML solution format (csharp/foundations/project-setup.md).
+  src/ holds the shippable projects, tests/ the test project. There is no
+  *.IntegrationTests project on purpose: every dependency is in-memory behind a
+  Core port, so the whole suite runs offline (see README, "Verify").
+-->
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Orders.Worker.Core/Orders.Worker.Core.csproj" />
+    <Project Path="src/Orders.Worker.Infrastructure/Orders.Worker.Infrastructure.csproj" />
+    <Project Path="src/Orders.Worker/Orders.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Orders.Worker.UnitTests/Orders.Worker.UnitTests.csproj" />
+  </Folder>
+</Solution>

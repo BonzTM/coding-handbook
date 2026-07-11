@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Domain project: the event contract, the messaging ports (publisher,
+       message source, inbox/outbox/DLQ stores), the backoff policy, and the
+       projection business rules. References NOTHING app-level - no ASP.NET
+       Core, no hosting, no broker client
+       (csharp/foundations/solution-and-project-design.md). TargetFramework,
+       nullable, analyzers, and lock-file settings all inherit from
+       Directory.Build.props. -->
+
+  <ItemGroup>
+    <!-- The matching test project may exercise internal members; nothing else. -->
+    <InternalsVisibleTo Include="Orders.Worker.UnitTests" />
+  </ItemGroup>
+
+</Project>

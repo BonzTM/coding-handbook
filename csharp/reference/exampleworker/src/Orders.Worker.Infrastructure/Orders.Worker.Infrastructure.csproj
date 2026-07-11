@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Adapter project: the in-memory broker + stores implementing the Core
+       ports, the delivery pipeline (consume loop, bounded retry, DLQ), the
+       outbox relay, and the worker's metrics/health wiring. References Core;
+       never referenced by Core. The host references this project only from
+       its composition root (csharp/foundations/solution-and-project-design.md). -->
+
+  <ItemGroup>
+    <ProjectReference Include="../Orders.Worker.Core/Orders.Worker.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- BackgroundService for the consumer and outbox-relay workers. -->
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <!-- AddHealthChecks().AddCheck for the /readyz "broker" health check. -->
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
+    <!-- OptionsBuilder.BindConfiguration + ValidateOnStart wiring. -->
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Orders.Worker.UnitTests" />
+  </ItemGroup>
+
+</Project>

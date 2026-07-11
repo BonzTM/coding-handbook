@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Offline unit + pipeline + host tests: domain rules, the consume
+       pipeline's retry/dedupe/DLQ decisions against the in-memory stores, the
+       outbox relay, probe endpoints via WebApplicationFactory, metrics via an
+       in-proc MeterListener, and the graceful-drain contract on a real host.
+       No Docker, no network - every dependency is in-memory behind a Core
+       port (csharp/quality/testing.md). -->
+
+  <PropertyGroup>
+    <!-- xunit.v3 runs on Microsoft.Testing.Platform: the test project is an
+         executable and `dotnet test` drives the MTP runner. -->
+    <OutputType>Exe</OutputType>
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Orders.Worker.Core/Orders.Worker.Core.csproj" />
+    <ProjectReference Include="../../src/Orders.Worker.Infrastructure/Orders.Worker.Infrastructure.csproj" />
+    <ProjectReference Include="../../src/Orders.Worker/Orders.Worker.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <!-- In-proc probe-endpoint tests via WebApplicationFactory<Program>. -->
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <!-- Deterministic time (csharp/foundations/time.md). -->
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+  </ItemGroup>
+
+</Project>
