@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Offline unit + transport tests: Core domain rules against the in-memory
+       store, error-mapping and deadline-guard tests, and in-proc gRPC
+       transport tests - a GrpcChannel over WebApplicationFactory's TestServer
+       drives the REAL pipeline (interceptor chain, status mapping, health,
+       reflection). No Docker, no network (csharp/quality/testing.md); this
+       module has no integration-test project because it has no external
+       dependency - verify.ps1 -Integration is a documented no-op. -->
+
+  <PropertyGroup>
+    <!-- xunit.v3 runs on Microsoft.Testing.Platform: the test project is an
+         executable and `dotnet test` drives the MTP runner. -->
+    <OutputType>Exe</OutputType>
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Orders.Grpc.Core/Orders.Grpc.Core.csproj" />
+    <ProjectReference Include="../../src/Orders.Grpc.Api/Orders.Grpc.Api.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <!-- In-proc host via WebApplicationFactory<Program>. -->
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <!-- The gRPC client channel the transport tests dial through TestServer. -->
+    <PackageReference Include="Grpc.Net.Client" />
+    <!-- Decoding google.rpc.Status/BadRequest details client-side. -->
+    <PackageReference Include="Grpc.StatusProto" />
+    <!-- Generated grpc.health.v1 client. -->
+    <PackageReference Include="Grpc.HealthCheck" />
+    <!-- Generated reflection client. -->
+    <PackageReference Include="Grpc.Reflection" />
+    <!-- Deterministic time (csharp/foundations/time.md). -->
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+  </ItemGroup>
+
+</Project>

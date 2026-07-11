@@ -1,0 +1,16 @@
+<!--
+  Orders.slnx - the XML solution format (csharp/foundations/project-setup.md).
+  src/ holds the shippable projects, tests/ the two test projects the layout
+  mandates (csharp/foundations/solution-and-project-design.md).
+-->
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Orders.Core/Orders.Core.csproj" />
+    <Project Path="src/Orders.Infrastructure/Orders.Infrastructure.csproj" />
+    <Project Path="src/Orders.Api/Orders.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Orders.UnitTests/Orders.UnitTests.csproj" />
+    <Project Path="tests/Orders.IntegrationTests/Orders.IntegrationTests.csproj" />
+  </Folder>
+</Solution>

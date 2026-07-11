@@ -1,0 +1,17 @@
+<!--
+  Orders.Grpc.slnx - the XML solution format (csharp/foundations/project-setup.md).
+  Two shippable projects: Orders.Grpc.Core (domain + in-memory store) and
+  Orders.Grpc.Api (gRPC host). No Infrastructure project on purpose - this
+  module has no database; the store seam is satisfied in-process, mirroring
+  golang/reference/examplegrpc (csharp/foundations/solution-and-project-design.md
+  allows fewer projects when a layer would be empty).
+-->
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Orders.Grpc.Core/Orders.Grpc.Core.csproj" />
+    <Project Path="src/Orders.Grpc.Api/Orders.Grpc.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Orders.Grpc.UnitTests/Orders.Grpc.UnitTests.csproj" />
+  </Folder>
+</Solution>

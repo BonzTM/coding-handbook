@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Domain project: entities, ports (interfaces), business rules, and - in
+       this module only - the in-memory store that satisfies the port.
+       References NOTHING app-level: no ASP.NET Core, no gRPC, no proto types
+       (csharp/foundations/solution-and-project-design.md). The wire error
+       detail (google.rpc.BadRequest) is built at the transport boundary from
+       the structured violations this project carries
+       (csharp/services/grpc-services.md, Error Details). -->
+
+  <ItemGroup>
+    <!-- The matching test project may exercise internal members; nothing else. -->
+    <InternalsVisibleTo Include="Orders.Grpc.UnitTests" />
+  </ItemGroup>
+
+</Project>

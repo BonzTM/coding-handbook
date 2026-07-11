@@ -1,0 +1,57 @@
+# .gitignore for a .NET repo using the artifacts output layout.
+# (Shipped as `gitignore` in the handbook so the docs repo itself does not
+# ignore its own files; rename to `.gitignore` when copying into an app repo.)
+#
+# Rules of this file:
+#   - Root-anchor (leading /) every pattern that could otherwise swallow a
+#     committed source directory somewhere deeper in the tree.
+#   - bin/ and obj/ are the exception: MSBuild creates them INSIDE every
+#     project directory, so they must match at any depth. Never name a source
+#     directory bin or obj.
+#   - packages.lock.json is COMMITTED (locked restore) - do not ignore it.
+#   - appsettings.json is COMMITTED (no secrets in it) - do not ignore it.
+
+# -----------------------------------------------------------------------------
+# Build output. UseArtifactsOutput=true (Directory.Build.props) routes ALL
+# build/publish/pack output to this single root-level directory.
+# -----------------------------------------------------------------------------
+/artifacts/
+
+# Per-project outputs (produced by stray builds without the artifacts layout,
+# and obj/ still holds per-project restore state either way).
+bin/
+obj/
+
+# -----------------------------------------------------------------------------
+# IDE and editor state.
+# -----------------------------------------------------------------------------
+/.vs/
+/.idea/
+*.user
+*.suo
+*.DotSettings.user
+
+# -----------------------------------------------------------------------------
+# Test and coverage output. Root-anchored where tools write to the repo root;
+# TestResults/ appears next to each test project, so it matches at any depth
+# (never name a source directory TestResults).
+# -----------------------------------------------------------------------------
+TestResults/
+/coverage/
+*.trx
+*.coverage
+*.coveragexml
+
+# -----------------------------------------------------------------------------
+# Local-only files. Secrets never live in the repo: local dev uses
+# `dotnet user-secrets` (stored outside the repo); runtime uses env vars.
+# -----------------------------------------------------------------------------
+*.pfx
+*.snk
+.env
+.env.*
+!.env.example
+
+# OS noise.
+.DS_Store
+Thumbs.db

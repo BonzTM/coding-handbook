@@ -1,0 +1,64 @@
+# .gitattributes - normalize line endings in the repo regardless of any
+# developer's core.autocrlf setting. The repo stores LF; the working tree is
+# LF everywhere except Windows batch files. Pairs with .editorconfig
+# (end_of_line = lf) so editors and git agree.
+# Rationale: csharp/foundations/cross-platform.md
+
+# Default: git decides text vs binary, normalizes text to LF in the object DB.
+* text=auto
+
+# -----------------------------------------------------------------------------
+# Source and config: explicit LF so checkouts are byte-identical on all OSes.
+# dotnet format, hashing, and Docker COPY all behave the same on every machine.
+# -----------------------------------------------------------------------------
+*.cs        text eol=lf
+*.csproj    text eol=lf
+*.props     text eol=lf
+*.targets   text eol=lf
+*.slnx      text eol=lf
+*.sln       text eol=lf
+*.json      text eol=lf
+*.config    text eol=lf
+*.xml       text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.md        text eol=lf
+*.sql       text eol=lf
+*.proto     text eol=lf
+*.sh        text eol=lf
+*.ps1       text eol=lf
+.editorconfig text eol=lf
+.gitattributes text eol=lf
+.gitignore  text eol=lf
+Dockerfile  text eol=lf
+Makefile    text eol=lf
+
+# The canonical gate must be LF: pwsh parses LF fine on Windows, and the same
+# bytes run in Linux CI containers.
+verify.ps1  text eol=lf
+
+# -----------------------------------------------------------------------------
+# Windows batch files: cmd.exe misparses LF-only labels - CRLF is required.
+# The ONLY CRLF exception (mirrored in .editorconfig).
+# -----------------------------------------------------------------------------
+*.cmd       text eol=crlf
+*.bat       text eol=crlf
+
+# -----------------------------------------------------------------------------
+# Binary: never normalize, never diff as text.
+# -----------------------------------------------------------------------------
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.woff      binary
+*.woff2     binary
+*.ttf       binary
+*.zip       binary
+*.gz        binary
+*.dll       binary
+*.exe       binary
+*.pdb       binary
+*.snk       binary
+*.pfx       binary

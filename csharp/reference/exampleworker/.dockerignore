@@ -1,0 +1,46 @@
+# Keep the build context minimal: only what `dotnet publish` needs.
+# Destination: .dockerignore (repo root).
+
+# VCS
+.git
+.gitignore
+.gitattributes
+.github
+
+# Local environment and secrets — never enter the image build.
+# (Real secrets live in user-secrets or the platform store, but belt-and-braces.)
+.env
+.env.*
+*.local
+*.user
+
+# Build output. bin/ and obj/ MUST be excluded: host-restored obj/ assets leak
+# host paths and defeat the image's own locked restore.
+**/bin
+**/obj
+artifacts
+
+# Test projects and results — the Dockerfile restores and publishes only the
+# host project, so tests never enter the context. If you later build the whole
+# solution inside Docker (e.g. to run tests in a build stage), remove the
+# tests/ line.
+tests
+TestResults
+coverage
+
+# IDE and editor cruft
+.vs
+.idea
+.vscode
+*.swp
+.DS_Store
+
+# Containers / compose / the Dockerfile itself
+Dockerfile
+.dockerignore
+docker-compose*.yml
+k8s
+
+# Docs not needed to compile
+docs
+*.md

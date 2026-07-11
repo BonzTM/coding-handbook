@@ -33,6 +33,22 @@
     <!-- HybridCache: in-proc L1 by default, distributed L2 (Redis/Valkey)
          when configured. The handbook's default cache (../services/caching.md). -->
     <PackageVersion Include="Microsoft.Extensions.Caching.Hybrid" Version="10.7.0" />
+    <!-- JWT bearer authentication against the issuer's JWKS
+         (../operations/security.md). ASP.NET Core release train, so it stays
+         on the same 10.0.x line as the framework. -->
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.9" />
+    <!-- OptionsBuilder.BindConfiguration for class libraries (Infrastructure
+         binds its own options; the ASP.NET shared framework is not referenced
+         there). .NET runtime release train. -->
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.9" />
+    <!-- OptionsBuilder.ValidateDataAnnotations for the same class libraries. -->
+    <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.9" />
+    <!-- BackgroundService/IHostedService in class libraries that host worker
+         logic without referencing the ASP.NET shared framework. -->
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.9" />
+    <!-- Health-check registrations from class libraries (the host maps
+         /livez + /readyz; Infrastructure contributes its checks). -->
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.9" />
   </ItemGroup>
 
   <!-- ======================================================================
@@ -44,6 +60,9 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.9" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <!-- AddDbContextCheck for the /readyz database health check
+         (../operations/observability.md). ASP.NET Core release train. -->
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.9" />
   </ItemGroup>
 
   <!-- ======================================================================
@@ -86,6 +105,25 @@
     <PackageVersion Include="NSubstitute" Version="5.3.0" />
     <!-- Real PostgreSQL in integration tests, behind the -Integration switch. -->
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.13.0" />
+  </ItemGroup>
+
+  <!-- ======================================================================
+       gRPC (gRPC services only): Grpc.AspNetCore bundles Grpc.Tools for
+       build-time codegen from api/*.proto - no committed stubs
+       (../services/grpc-services.md). Client/HealthCheck/Reflection packages
+       serve GrpcChannel-based tests and tooling. grpc-dotnet family versions
+       move together - verified on nuget.org 2026-07-11.
+       ====================================================================== -->
+  <ItemGroup>
+    <PackageVersion Include="Grpc.AspNetCore" Version="2.80.0" />
+    <PackageVersion Include="Grpc.AspNetCore.HealthChecks" Version="2.80.0" />
+    <PackageVersion Include="Grpc.AspNetCore.Server.Reflection" Version="2.80.0" />
+    <!-- google.rpc.Status error-details model built in the exception-mapping
+         interceptor - the handbook's gRPC error contract. -->
+    <PackageVersion Include="Grpc.StatusProto" Version="2.80.0" />
+    <PackageVersion Include="Grpc.Net.Client" Version="2.80.0" />
+    <PackageVersion Include="Grpc.HealthCheck" Version="2.80.0" />
+    <PackageVersion Include="Grpc.Reflection" Version="2.80.0" />
   </ItemGroup>
 
   <!-- ======================================================================

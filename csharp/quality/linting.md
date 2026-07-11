@@ -53,6 +53,10 @@ Formatting and analysis are deliberately separate stages: `dotnet format --verif
 - **Style** (`IDExxxx`, enforced in build) — naming conventions, file-scoped namespaces, unused code removal, per [../foundations/style-and-review.md](../foundations/style-and-review.md). The `.editorconfig` is where each style rule's severity is chosen.
 - **Nullability** (compiler `CS86xx`/`CS87xx` warnings) — with `<Nullable>enable</Nullable>` and warnings-as-errors, a nullability warning is a build failure. Never "fix" one with `!` unless the justification would survive review as a comment.
 
+### The GenerateDocumentationFile Trade-Off
+
+`IDE0005` (remove unnecessary usings) only fires during the build when the project generates an XML documentation file, so the committed [Directory.Build.props](../templates/Directory.Build.props) sets `GenerateDocumentationFile=true` repo-wide — without it, the compiler emits the `EnableGenerateDocumentationFile` diagnostic and warnings-as-errors fails every build. The side effect is `CS1591` (missing XML doc on public member), which is a policy decision, not noise: services set `CS1591` to `none` in `.editorconfig` (a service documents its public seams, not every DTO property), libraries flip it to `warning` so an undocumented public member fails the build. The doc-comment contract itself lives in [../foundations/style-and-review.md](../foundations/style-and-review.md).
+
 ### Considered And Excluded
 
 Deliberate exclusions, so nobody re-litigates them one PR at a time. Extra analyzer packages are ADR-level adoptions routed via [../decisions/framework-selection.md](../decisions/framework-selection.md):

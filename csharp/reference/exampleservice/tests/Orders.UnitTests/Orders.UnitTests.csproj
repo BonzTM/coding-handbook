@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Offline unit + transport + contract tests: Core domain rules against the
+       in-memory fake repository, WebApplicationFactory endpoint tests with
+       fakes behind the Core ports, and the golden-file JSON contract test.
+       No Docker, no network (csharp/quality/testing.md). -->
+
+  <PropertyGroup>
+    <!-- xunit.v3 runs on Microsoft.Testing.Platform: the test project is an
+         executable and `dotnet test` drives the MTP runner. -->
+    <OutputType>Exe</OutputType>
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Orders.Core/Orders.Core.csproj" />
+    <ProjectReference Include="../../src/Orders.Api/Orders.Api.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <!-- In-proc HTTP transport tests via WebApplicationFactory<Program>. -->
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <!-- Deterministic time (csharp/foundations/time.md). -->
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Golden files: committed wire contracts, compared byte-for-byte
+         (csharp/quality/testing.md, contract tests). -->
+    <Content Include="TestData/**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

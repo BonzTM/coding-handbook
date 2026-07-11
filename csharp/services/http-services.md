@@ -88,6 +88,7 @@ public sealed record CreateOrderRequest(
 ```
 
 - Validation attributes live on the wire DTO in `Contracts/`, never on `Orders.Core` domain types.
+- Wire DTOs must be `public`: the validation source generator behind `AddValidation()` silently skips `internal` types — no error, no validation. This is why the canonical [.editorconfig](../templates/.editorconfig) disables CA1515 under `Contracts/`; do not "fix" a DTO to `internal`.
 - Validation checks shape and range. Business rules (inventory, tenancy, state transitions) live in core and surface as domain errors, not annotations.
 - Opt an endpoint out only with `.DisableValidation()` plus a comment saying why (e.g., raw-stream ingest). FluentValidation is an ADR, not a default.
 

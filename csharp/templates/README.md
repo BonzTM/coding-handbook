@@ -4,7 +4,7 @@ Committed, copy-paste-ready starting artifacts for a new C#/.NET repository, so 
 
 This tree is the artifact home that the prose docs keep implying. When [foundations/project-setup.md](../foundations/project-setup.md) says "thin `Program.cs`" or [checklists/new-project.md](../checklists/new-project.md) says "baseline CI runs `pwsh ./verify.ps1`", the concrete file lives here. Copy a template into the destination its filename encodes, fill in the placeholders, and the result is governed by the linked handbook doc.
 
-Exact version pins (SDK line, package versions, action majors, base images) live ONLY in these templates — prose docs never pin. Compiling reference modules (`reference/`, a full `verify.ps1`-green example service) are planned as phase 2; until they land, these templates are the interim source of exact pins and the canonical copies.
+Exact version pins (SDK line, package versions, action majors, base images) live ONLY in these templates and the `reference/` modules — prose docs never pin. The three compiling, `verify.ps1`-green reference modules ([exampleservice](../reference/exampleservice/), [examplegrpc](../reference/examplegrpc/), [exampleworker](../reference/exampleworker/)) carry these same files as proven copies; when bootstrapping a new repo, copy from the reference module matching your shape and fall back to this tree for the pieces it lacks.
 
 ## How To Use
 

@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- Thin worker host: composition root, probe endpoints, telemetry wiring.
+       It is a Web SDK project ONLY because the worker serves /livez + /readyz
+       on Kestrel (the C# counterpart of the Go reference's probe sidecar); it
+       carries no application routes. References Infrastructure ONLY so
+       Program.cs can compose it
+       (csharp/foundations/solution-and-project-design.md). -->
+
+  <ItemGroup>
+    <ProjectReference Include="../Orders.Worker.Core/Orders.Worker.Core.csproj" />
+    <ProjectReference Include="../Orders.Worker.Infrastructure/Orders.Worker.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- OpenTelemetry: one AddServiceTelemetry() extension wires all three
+         signals with OTLP export (csharp/operations/observability.md). -->
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The test suite boots the host via WebApplicationFactory<Program> and
+         builds drain hosts from the same composition. -->
+    <InternalsVisibleTo Include="Orders.Worker.UnitTests" />
+  </ItemGroup>
+
+</Project>

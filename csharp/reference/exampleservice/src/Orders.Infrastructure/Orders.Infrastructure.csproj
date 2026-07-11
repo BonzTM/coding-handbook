@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Adapter project: EF Core (Npgsql), repositories implementing Core ports,
+       and the migration runner. References Core; never referenced by Core.
+       Api references this project only from its composition root
+       (csharp/foundations/solution-and-project-design.md). -->
+
+  <ItemGroup>
+    <ProjectReference Include="../Orders.Core/Orders.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <!-- Design-time only (migrations scaffolding); never a runtime dependency. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <!-- AddDbContextCheck for the /readyz "database" health check. -->
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
+    <!-- OptionsBuilder.BindConfiguration + ValidateOnStart wiring. -->
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Orders.IntegrationTests" />
+  </ItemGroup>
+
+</Project>

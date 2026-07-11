@@ -121,6 +121,9 @@ public sealed class OutboxMessage
 {
     public Guid Id { get; init; }
     public required string Type { get; init; }
+    // The broker subject / partition key — the aggregate ID per the publisher
+    // rules above, so ordering-per-key survives the outbox hop.
+    public required string Subject { get; init; }
     public required string Payload { get; init; }
     public DateTimeOffset OccurredAt { get; init; }
     public DateTimeOffset? SentAt { get; set; }

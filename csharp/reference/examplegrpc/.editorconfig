@@ -1,0 +1,299 @@
+# .editorconfig - the single source of truth for style and analyzer severity.
+# The C# counterpart of the Go handbook's .golangci.yml: the build enforces
+# everything here because Directory.Build.props sets EnforceCodeStyleInBuild
+# and TreatWarningsAsErrors. A rule at `warning` severity therefore FAILS the
+# build; `suggestion` shows in the IDE only; `none` is a deliberate opt-out.
+#
+# Policy, rationale, and the suppression workflow: csharp/quality/linting.md
+#
+# Suppression policy (short form):
+#   - Prefer fixing the code. A suppression is a decision that needs a reason.
+#   - File-or-line scope: #pragma warning disable ONLY with a trailing comment
+#     naming the rule and the reason, restored immediately after.
+#   - Repo scope: change the severity HERE, in the overrides section at the
+#     bottom, with a comment. Never loosen TreatWarningsAsErrors instead.
+
+# Top-most EditorConfig file; stop searching parent directories.
+root = true
+
+# =============================================================================
+# All files: UTF-8, LF, final newline. LF matches .gitattributes and keeps
+# Windows/Linux/macOS checkouts byte-identical (../foundations/cross-platform.md).
+# =============================================================================
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# Project/build/config files read better at 2 spaces.
+[*.{csproj,props,targets,slnx,config,xml,json,yml,yaml}]
+indent_size = 2
+
+# Markdown: trailing double-space is a hard line break; do not strip it.
+[*.md]
+trim_trailing_whitespace = false
+
+# Windows batch files are the ONE place CRLF is required (cmd.exe misparses
+# LF-only labels). Mirrored by .gitattributes.
+[*.{cmd,bat}]
+end_of_line = crlf
+
+# =============================================================================
+# C# source
+# =============================================================================
+[*.cs]
+
+# ---- Formatting (IDE0055 - enforced by `dotnet format --verify-no-changes`) ----
+dotnet_diagnostic.IDE0055.severity = warning
+
+# Usings: System first, single group, outside the namespace.
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+csharp_using_directive_placement = outside_namespace:warning
+
+# Allman braces everywhere - the .NET runtime/roslyn convention.
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_new_line_before_members_in_object_initializers = true
+csharp_new_line_before_members_in_anonymous_types = true
+csharp_new_line_between_query_expression_clauses = true
+
+csharp_indent_case_contents = true
+csharp_indent_switch_labels = true
+csharp_indent_labels = one_less_than_current
+
+csharp_space_after_cast = false
+csharp_space_after_keywords_in_control_flow_statements = true
+csharp_space_between_method_declaration_parameter_list_parentheses = false
+csharp_space_between_method_call_parameter_list_parentheses = false
+csharp_space_before_colon_in_inheritance_clause = true
+csharp_space_after_colon_in_inheritance_clause = true
+csharp_space_around_binary_operators = before_and_after
+
+csharp_preserve_single_line_statements = false
+csharp_preserve_single_line_blocks = true
+
+# ---- Language and style rules (dotnet_/csharp_ - build-enforced) ----
+
+# File-scoped namespaces only; block namespaces waste an indent level.
+csharp_style_namespace_declarations = file_scoped:warning
+
+# var: use it when the type is written on the right or obvious from the
+# expression; spell the type otherwise. Reviewers read code without hover.
+csharp_style_var_when_type_is_apparent = true:warning
+csharp_style_var_for_built_in_types = false:warning
+csharp_style_var_elsewhere = false:suggestion
+
+# No this. qualification and use language keywords (int, string) over
+# framework type names (Int32, String).
+dotnet_style_qualification_for_field = false:warning
+dotnet_style_qualification_for_property = false:warning
+dotnet_style_qualification_for_method = false:warning
+dotnet_style_qualification_for_event = false:warning
+dotnet_style_predefined_type_for_locals_parameters_members = true:warning
+dotnet_style_predefined_type_for_member_access = true:warning
+
+# Accessibility explicit on everything except interface members; readonly
+# wherever mutation is not required.
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning
+dotnet_style_readonly_field = true:warning
+
+# Expression-bodied members: properties and accessors yes; methods only when
+# the whole thing fits one line; constructors always block-bodied.
+csharp_style_expression_bodied_properties = true:warning
+csharp_style_expression_bodied_accessors = true:warning
+csharp_style_expression_bodied_indexers = true:warning
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+csharp_style_expression_bodied_operators = when_on_single_line:suggestion
+csharp_style_expression_bodied_constructors = false:warning
+csharp_style_expression_bodied_lambdas = true:suggestion
+csharp_style_expression_bodied_local_functions = when_on_single_line:suggestion
+
+# Pattern matching over is-then-cast, as-then-null-check, and comparison
+# chains; switch expressions where they read better.
+csharp_style_pattern_matching_over_is_with_cast_check = true:warning
+csharp_style_pattern_matching_over_as_with_null_check = true:warning
+csharp_style_prefer_pattern_matching = true:suggestion
+csharp_style_prefer_switch_expression = true:suggestion
+csharp_style_prefer_not_pattern = true:warning
+csharp_style_prefer_extended_property_pattern = true:warning
+
+# Null handling: coalescing, propagation, `is null` (never `== null`, which
+# overloaded operators can subvert).
+dotnet_style_coalesce_expression = true:warning
+dotnet_style_null_propagation = true:warning
+dotnet_style_prefer_is_null_check_over_reference_equality_method = true:warning
+csharp_style_throw_expression = true:suggestion
+csharp_style_conditional_delegate_call = true:warning
+
+# Modern initializers, tuples, and compound assignment.
+dotnet_style_object_initializer = true:warning
+dotnet_style_collection_initializer = true:warning
+dotnet_style_prefer_collection_expression = when_types_loosely_match:warning
+dotnet_style_prefer_auto_properties = true:warning
+dotnet_style_prefer_compound_assignment = true:warning
+dotnet_style_prefer_simplified_interpolation = true:warning
+dotnet_style_prefer_conditional_expression_over_assignment = true:suggestion
+dotnet_style_prefer_conditional_expression_over_return = true:suggestion
+dotnet_style_explicit_tuple_names = true:warning
+dotnet_style_prefer_inferred_tuple_names = true:warning
+
+# Parentheses: keep them when they clarify precedence, drop them elsewhere.
+dotnet_style_parentheses_in_arithmetic_binary_operators = always_for_clarity:warning
+dotnet_style_parentheses_in_relational_binary_operators = always_for_clarity:warning
+dotnet_style_parentheses_in_other_binary_operators = always_for_clarity:warning
+dotnet_style_parentheses_in_other_operators = never_if_unnecessary:suggestion
+
+# Braces on every control-flow body; single-statement ifs grow bugs.
+csharp_prefer_braces = true:warning
+
+# Prefer method groups and simple usings/locks.
+csharp_style_prefer_method_group_conversion = true:suggestion
+csharp_prefer_simple_using_statement = true:warning
+csharp_style_prefer_primary_constructors = true:suggestion
+
+# Unused values must be deliberate: assign to discard.
+csharp_style_unused_value_expression_statement_preference = discard_variable:suggestion
+csharp_style_unused_value_assignment_preference = discard_variable:warning
+dotnet_code_quality_unused_parameters = all:warning
+
+# Namespace must match folder structure.
+dotnet_style_namespace_match_folder = true:warning
+dotnet_diagnostic.IDE0130.severity = warning
+
+# Remove unnecessary usings. NOTE: IDE0005 only fires in the BUILD when the
+# project generates an XML doc file; see ../quality/linting.md for the
+# GenerateDocumentationFile trade-off. `dotnet format` flags it regardless.
+dotnet_diagnostic.IDE0005.severity = warning
+
+# ---- Naming rules ----
+# PascalCase types/members/constants, IPascalCase interfaces, TPascalCase
+# type parameters, _camelCase private/internal fields, camelCase locals and
+# parameters. Violations fail the build.
+
+dotnet_diagnostic.IDE1006.severity = warning
+
+# Interfaces: I prefix.
+dotnet_naming_rule.interfaces_begin_with_i.symbols = interface_symbols
+dotnet_naming_rule.interfaces_begin_with_i.style = ipascal_case
+dotnet_naming_rule.interfaces_begin_with_i.severity = warning
+dotnet_naming_symbols.interface_symbols.applicable_kinds = interface
+dotnet_naming_symbols.interface_symbols.applicable_accessibilities = *
+dotnet_naming_style.ipascal_case.capitalization = pascal_case
+dotnet_naming_style.ipascal_case.required_prefix = I
+
+# Type parameters: T prefix.
+dotnet_naming_rule.type_parameters_begin_with_t.symbols = type_parameter_symbols
+dotnet_naming_rule.type_parameters_begin_with_t.style = tpascal_case
+dotnet_naming_rule.type_parameters_begin_with_t.severity = warning
+dotnet_naming_symbols.type_parameter_symbols.applicable_kinds = type_parameter
+dotnet_naming_symbols.type_parameter_symbols.applicable_accessibilities = *
+dotnet_naming_style.tpascal_case.capitalization = pascal_case
+dotnet_naming_style.tpascal_case.required_prefix = T
+
+# Constants (any accessibility): PascalCase.
+dotnet_naming_rule.constants_are_pascal_case.symbols = constant_symbols
+dotnet_naming_rule.constants_are_pascal_case.style = pascal_case
+dotnet_naming_rule.constants_are_pascal_case.severity = warning
+dotnet_naming_symbols.constant_symbols.applicable_kinds = field, local
+dotnet_naming_symbols.constant_symbols.applicable_accessibilities = *
+dotnet_naming_symbols.constant_symbols.required_modifiers = const
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+
+# Private and internal instance/static fields: _camelCase.
+dotnet_naming_rule.private_fields_are_underscore_camel_case.symbols = private_field_symbols
+dotnet_naming_rule.private_fields_are_underscore_camel_case.style = underscore_camel_case
+dotnet_naming_rule.private_fields_are_underscore_camel_case.severity = warning
+dotnet_naming_symbols.private_field_symbols.applicable_kinds = field
+dotnet_naming_symbols.private_field_symbols.applicable_accessibilities = private, internal, private_protected
+dotnet_naming_style.underscore_camel_case.capitalization = camel_case
+dotnet_naming_style.underscore_camel_case.required_prefix = _
+
+# Locals and parameters: camelCase.
+dotnet_naming_rule.locals_and_parameters_are_camel_case.symbols = local_symbols
+dotnet_naming_rule.locals_and_parameters_are_camel_case.style = camel_case
+dotnet_naming_rule.locals_and_parameters_are_camel_case.severity = warning
+dotnet_naming_symbols.local_symbols.applicable_kinds = parameter, local
+dotnet_naming_style.camel_case.capitalization = camel_case
+
+# Everything else visible (types, methods, properties, events, public
+# fields): PascalCase.
+dotnet_naming_rule.members_are_pascal_case.symbols = member_symbols
+dotnet_naming_rule.members_are_pascal_case.style = pascal_case
+dotnet_naming_rule.members_are_pascal_case.severity = warning
+dotnet_naming_symbols.member_symbols.applicable_kinds = namespace, class, struct, enum, delegate, method, property, event, field
+dotnet_naming_symbols.member_symbols.applicable_accessibilities = public, protected, protected_internal
+
+# ---- Code-quality (CA) severity overrides ----
+# AnalysisLevel=latest-all enables every category; the overrides below are
+# the handbook's deliberate deviations. Each carries a reason. Add new
+# overrides here (never inline blanket pragmas) - policy in ../quality/linting.md.
+
+# CA2007 (ConfigureAwait(false)): OFF for application code. ASP.NET Core and
+# console hosts have no SynchronizationContext, so ConfigureAwait(false) is
+# pure noise. Reusable LIBRARY repos flip this to warning.
+dotnet_diagnostic.CA2007.severity = none
+
+# CA1848 (use LoggerMessage delegates): WARNING. The handbook mandates
+# source-generated [LoggerMessage] logging; interpolated/templated ILogger
+# extension calls on hot paths fail the build.
+dotnet_diagnostic.CA1848.severity = warning
+
+# CA2016 (forward CancellationToken) and CA1849 (never block on sync-over-
+# async inside async): both are correctness rules for the cancellation
+# contract (../foundations/cancellation-and-async.md).
+dotnet_diagnostic.CA2016.severity = warning
+dotnet_diagnostic.CA1849.severity = warning
+
+# CA1305/CA1310 (IFormatProvider / StringComparison explicit): WARNING.
+# Culture-implicit parse/format/compare is a cross-platform and correctness
+# bug at trust boundaries (../foundations/cross-platform.md).
+dotnet_diagnostic.CA1305.severity = warning
+dotnet_diagnostic.CA1310.severity = warning
+
+# CA1062 (null-check public arguments): OFF. Nullable reference types are
+# enabled repo-wide and enforced as errors; runtime null guards on every
+# public method duplicate what the type system already proves.
+dotnet_diagnostic.CA1062.severity = none
+
+# CA1031 (do not catch general exceptions): SUGGESTION, not error. Top-level
+# boundaries (endpoint filters, BackgroundService loops, Program.cs) catch
+# broadly by design and log once; interior code should not.
+dotnet_diagnostic.CA1031.severity = suggestion
+
+# CA1032 (standard exception constructors): OFF. The handbook's domain
+# exceptions REQUIRE their context (../foundations/errors-and-logging.md,
+# Custom Exception Design): a parameterless OrderNotFoundException with no
+# order id is exactly the object that design forbids. Wrapping types still
+# provide (string, Exception) by that doc's rule - reviewed, not analyzer-forced.
+dotnet_diagnostic.CA1032.severity = none
+
+# CA1034 (do not nest public types): OFF. Closed result sets are modeled as an
+# abstract record with a private constructor and nested sealed case records -
+# the handbook's domain-result pattern (../foundations/errors-and-logging.md,
+# When To Return Instead Of Throw). Nesting is what seals the hierarchy.
+dotnet_diagnostic.CA1034.severity = none
+
+# CS1591 (missing XML doc on public member): OFF for services. The doc file is
+# generated so IDE0005 (unnecessary usings) runs in the build, but a service
+# documents its public seams, not every DTO property
+# (../foundations/style-and-review.md). LIBRARY repos flip this to warning.
+dotnet_diagnostic.CS1591.severity = none
+
+# (The keystone module's Contracts/ CA1515 override and Migrations/ generated-
+# code section do not apply here: the wire contract is the proto under api/,
+# generated by Grpc.Tools into obj/ and already marked auto-generated, and this
+# module has no EF Core migrations.)
+
+# ---- Test projects: relax rules that fight test ergonomics ----
+[tests/**.cs]
+# Tests name methods Method_Scenario_Expectation; underscores are the point.
+dotnet_diagnostic.CA1707.severity = none
+# xUnit requires PUBLIC test classes (xUnit1000), and public fixtures follow;
+# CA1515's make-internal fix would break discovery.
+dotnet_diagnostic.CA1515.severity = none
