@@ -35,6 +35,7 @@ public sealed class OrderStoreUnavailableException : Exception
 - One type per condition callers branch on. Do not build speculative hierarchies; two or three domain exceptions per service is typical.
 - Provide a `(string message, Exception inner)` constructor on any type used for wrapping.
 - Domain exceptions live in `Orders.Core`; infrastructure wrappers live in `Orders.Infrastructure`.
+- Analyzer interplay: CA1032 demands parameterless and message-only constructors — the exact constructors this design forbids (an `OrderNotFoundException` without an order id is useless). The canonical [.editorconfig](../templates/.editorconfig) disables CA1032 for this reason; wrapping constructors are enforced by review, not by the analyzer.
 
 ### When To Return Instead Of Throw
 
@@ -54,6 +55,7 @@ public abstract record PlaceOrderResult
 
 - Rule of thumb: if every caller handles it, it is a result; if only a boundary handles it, it is an exception. Never expose the same condition through both channels.
 - No general-purpose `Result<T>` library by default — model the specific domain outcomes. A generic result monad across the codebase requires an ADR ([../decisions/architecture-decision-records.md](../decisions/architecture-decision-records.md)).
+- Analyzer interplay: the nested sealed case records are what seal the hierarchy, which trips CA1034 (no nested public types). The canonical [.editorconfig](../templates/.editorconfig) disables CA1034 so this pattern builds under warnings-as-errors.
 
 ### Error Categories
 

@@ -107,7 +107,10 @@ function Get-TestProjects {
 
 function Invoke-TestStage {
     Write-Stage "test (unit$(if ($Integration) { ' + integration' }))"
-    $projects = Get-TestProjects -IncludeIntegration:$Integration.IsPresent
+    # @() at the CALL SITE: PowerShell unrolls a function's return value, so a
+    # single matching project would come back as one FileInfo whose missing
+    # .Count property is a hard error under Set-StrictMode.
+    $projects = @(Get-TestProjects -IncludeIntegration:$Integration.IsPresent)
     if ($projects.Count -eq 0) {
         Write-Host 'FAIL: no test projects found under tests/' -ForegroundColor Red
         exit 1

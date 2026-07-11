@@ -15,7 +15,10 @@ WORKDIR /src
 # Cache dependency layers independently of source changes: copy ONLY the
 # restore inputs first (solution, central package versions, feeds, per-project
 # manifests + lock files), so day-to-day source edits reuse the restore layer.
-COPY *.slnx nuget.config Directory.Build.props Directory.Packages.props ./
+# .editorconfig rides along because it is the single source of analyzer
+# severities - without it the in-image build re-enables rules (e.g. CS1591)
+# that Directory.Build.props' warnings-as-errors then turns fatal.
+COPY *.slnx nuget.config Directory.Build.props Directory.Packages.props .editorconfig ./
 COPY src/Orders.Api/Orders.Api.csproj src/Orders.Api/packages.lock.json src/Orders.Api/
 COPY src/Orders.Core/Orders.Core.csproj src/Orders.Core/packages.lock.json src/Orders.Core/
 COPY src/Orders.Infrastructure/Orders.Infrastructure.csproj src/Orders.Infrastructure/packages.lock.json src/Orders.Infrastructure/
@@ -30,10 +33,12 @@ RUN dotnet restore src/Orders.Api/Orders.Api.csproj --locked-mode
 COPY src/ src/
 
 # Version metadata stamped into the published assembly. Override at build time:
-#   docker build --build-arg VERSION=v1.2.3 --build-arg COMMIT=$(git rev-parse HEAD) ...
+#   docker build --build-arg VERSION=1.2.3 --build-arg COMMIT=$(git rev-parse HEAD) ...
 # (the committed release workflow passes both). Surfaces at runtime via
 # AssemblyInformationalVersionAttribute — the app exposes it in logs/telemetry.
-ARG VERSION=dev
+# The default MUST be a valid semver prefix: the SDK validates the part before
+# '+' as a version (NETSDK1018 rejects a bare "dev").
+ARG VERSION=0.0.0-dev
 ARG COMMIT=unknown
 
 # Publish framework-dependent (the runtime image below supplies the runtime).
@@ -60,7 +65,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra
 # OCI labels tie the image back to source and the release tag. The release
 # workflow's metadata step supplies richer labels; these are the offline
 # fallback. Override via --build-arg CREATED=$(date -u +%Y-%m-%dT%H:%M:%SZ).
-ARG VERSION=dev
+ARG VERSION=0.0.0-dev
 ARG COMMIT=unknown
 ARG CREATED=
 LABEL org.opencontainers.image.source="https://github.com/<org>/<repo>" \

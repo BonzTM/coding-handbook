@@ -4,7 +4,7 @@ Testing strategy for .NET repos that need trustworthy behavior, not just green c
 
 ## Default Approach
 
-Use xUnit v3 running on Microsoft.Testing.Platform, with plain xUnit `Assert`. Tests live in the `tests/` projects the solution layout mandates — `<App>.UnitTests` and `<App>.IntegrationTests` (see [../foundations/solution-and-project-design.md](../foundations/solution-and-project-design.md)) — and the test projects copy their setup (`UseMicrosoftTestingPlatformRunner`, runner config) from the templates, not from memory.
+Use xUnit v3 running on Microsoft.Testing.Platform, with plain xUnit `Assert`. Tests live in the `tests/` projects the solution layout mandates — `<App>.UnitTests` and `<App>.IntegrationTests` (see [../foundations/solution-and-project-design.md](../foundations/solution-and-project-design.md)) — and the test projects copy their setup (`UseMicrosoftTestingPlatformRunner`, runner config) from the reference module's test projects ([../reference/exampleservice/tests/](../reference/exampleservice/tests/)), not from memory.
 
 ### Test Taxonomy
 

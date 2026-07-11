@@ -266,10 +266,46 @@ dotnet_diagnostic.CA1062.severity = none
 # broadly by design and log once; interior code should not.
 dotnet_diagnostic.CA1031.severity = suggestion
 
+# CA1032 (standard exception constructors): OFF. The handbook's domain
+# exceptions REQUIRE their context (../foundations/errors-and-logging.md,
+# Custom Exception Design): a parameterless OrderNotFoundException with no
+# order id is exactly the object that design forbids. Wrapping types still
+# provide (string, Exception) by that doc's rule - reviewed, not analyzer-forced.
+dotnet_diagnostic.CA1032.severity = none
+
+# CA1034 (do not nest public types): OFF. Closed result sets are modeled as an
+# abstract record with a private constructor and nested sealed case records -
+# the handbook's domain-result pattern (../foundations/errors-and-logging.md,
+# When To Return Instead Of Throw). Nesting is what seals the hierarchy.
+dotnet_diagnostic.CA1034.severity = none
+
+# CS1591 (missing XML doc on public member): OFF for services. The doc file is
+# generated so IDE0005 (unnecessary usings) runs in the build, but a service
+# documents its public seams, not every DTO property
+# (../foundations/style-and-review.md). LIBRARY repos flip this to warning.
+dotnet_diagnostic.CS1591.severity = none
+
+# ---- Wire DTOs: minimal-API validation discovers PUBLIC types only ----
+[src/**/Contracts/*.cs]
+# The validation source generator behind AddValidation() skips internal types;
+# CA1515's make-internal fix would silently disable request validation. Wire
+# DTOs are the one deliberate public surface besides Program.
+dotnet_diagnostic.CA1515.severity = none
+
+# ---- EF Core migrations: tool-generated code ----
+# Scaffolded by `dotnet ef migrations add`, committed and reviewed as schema
+# diffs (../recipes/add-migration.md), and REGENERATED - never hand-formatted.
+# Marking them generated keeps style rules and analyzers from fighting the
+# scaffolder's output (block namespaces, BOM, inline arrays) on every new
+# migration. The scaffold writes UTF-8 with BOM; accept that here.
+[**/Migrations/*.cs]
+generated_code = true
+charset = utf-8-bom
+
 # ---- Test projects: relax rules that fight test ergonomics ----
 [tests/**.cs]
 # Tests name methods Method_Scenario_Expectation; underscores are the point.
 dotnet_diagnostic.CA1707.severity = none
-# Test classes are instantiated by the runner; "unused" ctor params and
-# public nested fixture types are normal.
-dotnet_diagnostic.CA1034.severity = none
+# xUnit requires PUBLIC test classes (xUnit1000), and public fixtures follow;
+# CA1515's make-internal fix would break discovery.
+dotnet_diagnostic.CA1515.severity = none

@@ -46,7 +46,7 @@ services:
     build:
       context: .
       args:
-        VERSION: dev
+        VERSION: 0.0.0-dev
         COMMIT: local
     # Appended to the image ENTRYPOINT: runs `dotnet Orders.Api.dll --migrate`.
     command: ["--migrate"]
@@ -62,7 +62,7 @@ services:
       context: .
       # Stamp build metadata the same way the Dockerfile/CI does.
       args:
-        VERSION: dev
+        VERSION: 0.0.0-dev
         COMMIT: local
     depends_on:
       postgres:

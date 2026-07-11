@@ -50,6 +50,14 @@
     <!-- IDE style (IDE####) rules run in the build, not only in the editor,
          so `dotnet build` and CI see the same diagnostics as the IDE. -->
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <!-- Required for IDE0005 (remove unnecessary usings) to fire in the BUILD;
+         without it the compiler emits the EnableGenerateDocumentationFile
+         diagnostic, which warnings-as-errors turns into a hard failure. The
+         companion CS1591 policy (missing XML docs) lives in .editorconfig:
+         off for services, warning for libraries
+         (../foundations/style-and-review.md). -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <!-- ======================================================================

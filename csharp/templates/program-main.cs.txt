@@ -122,4 +122,7 @@ app.Run();
 
 // Expose the entry point class to WebApplicationFactory<Program> in
 // integration tests (top-level statements generate an internal Program).
+// The pragma is required: `dotnet format` applies suggestion-level codefixes,
+// and CA1515's make-internal fix would silently break WebApplicationFactory.
+#pragma warning disable CA1515 // Consider making public types internal
 public partial class Program;
