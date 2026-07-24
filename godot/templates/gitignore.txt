@@ -1,0 +1,33 @@
+# Version-control defaults for a Godot 4.x repo, owned by
+# foundations/project-setup.md (## Version Control Defaults). Baseline per
+# docs.godotengine.org/en/stable/tutorials/best_practices/version_control_systems.html
+# Destination: .gitignore (repo root).
+
+# Godot cache — import and project cache, fully regenerable, enormous in diffs.
+# Ignoring it also excludes .godot/export_credentials.cfg, where sensitive
+# export options live; inject those from CI secrets (operations/ci-and-release.md).
+.godot/
+
+# Imported translation artifacts — binary output of CSV translation imports.
+# The source CSV/PO files stay tracked; the compiled artifacts do not
+# (systems/localization.md).
+*.translation
+
+# Export artifacts — CI and local exports write to build/ (operations/ci-and-release.md).
+# Exported packs are build products, never sources.
+# Do NOT ignore export_presets.cfg: it is required for headless CI export and
+# the official export docs say it "can be safely committed to version control".
+build/
+*.pck
+
+# Local environment and secrets — never enter history.
+.env
+.env.*
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/

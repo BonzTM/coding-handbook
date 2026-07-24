@@ -1,0 +1,105 @@
+# gdlint configuration for a Godot 4.x repo. Targets gdtoolkit 4.x, owned by
+# quality/linting-and-formatting.md (### Configuration).
+# Destination: .gdlintrc (repo root). gdlint discovers `gdlintrc` or
+# `.gdlintrc` by searching upward from the working directory.
+#
+# Pin one exact gdtoolkit version and use it everywhere — local, pre-commit,
+# CI (quality/linting-and-formatting.md ### Toolchain):
+#   pip3 install "gdtoolkit==4.*"     # then pin the resolved version
+# Run with: gdlint <first-party dirs>   # exit 0 is the gate
+# Formatting is gdformat's job; it reads its own gdformatrc, not this file.
+#
+# Baseline is the upstream default config (`gdlint -d`, verified against
+# gdtoolkit 4.3.2 and 4.5.0 — identical for every key below). Values are
+# restated here so the contract is visible in review; any deviation from an
+# upstream default must carry a comment. The rule set mechanizes the official
+# GDScript style guide:
+# docs.godotengine.org/en/stable/tutorials/scripting/gdscript/gdscript_styleguide.html
+
+# --- Severity Defaults -------------------------------------------------------
+# gdlint has no severity tiers: every finding from an enabled check fails the
+# run. This disable list is the only global knob. Keep it empty; a check that
+# is wrong for this codebase gets disabled here with a comment (and mirrored
+# to the handbook template in the same PR), never dodged with scattered
+# ignores. Narrow escapes are `# gdlint:ignore = <check>` on the offending
+# line, or a `# gdlint: disable=<check>` block always closed by the matching
+# `# gdlint: enable=<check>`.
+# Hygiene checks that take no configuration stay on by default and are not
+# restated below: duplicated-load, expression-not-assigned, unnecessary-pass,
+# unused-argument, comparison-with-itself, no-else-return, no-elif-return,
+# mixed-tabs-and-spaces, trailing-whitespace.
+disable: []
+
+# --- Naming Rules --------------------------------------------------------
+# Upstream defaults, restated: PascalCase types, snake_case members,
+# CONSTANT_CASE constants, per the official style guide. A leading `_?`
+# admits the private prefix (and intentionally unused arguments/loop vars).
+class-name: ([A-Z][a-z0-9]*)+
+sub-class-name: _?([A-Z][a-z0-9]*)+
+enum-name: ([A-Z][a-z0-9]*)+
+enum-element-name: '[A-Z][A-Z0-9]*(_[A-Z0-9]+)*'
+constant-name: _?[A-Z][A-Z0-9]*(_[A-Z0-9]+)*
+# Functions: snake_case with optional `_` private prefix. The first
+# alternative admits editor-generated `_on_PascalCaseNode_signal` callbacks.
+function-name: (_on_([A-Z][a-z0-9]*)+(_[a-z0-9]+)*|_?[a-z][a-z0-9]*(_[a-z0-9]+)*)
+# Signals: snake_case. The style guide's past-tense rule (`door_opened`, not
+# `open_door`) is not regex-checkable; enforce it in review
+# (foundations/signals-and-decoupling.md owns signal naming).
+signal-name: '[a-z][a-z0-9]*(_[a-z0-9]+)*'
+class-variable-name: _?[a-z][a-z0-9]*(_[a-z0-9]+)*
+function-variable-name: '[a-z][a-z0-9]*(_[a-z0-9]+)*'   # locals have no privacy; no `_`
+function-argument-name: _?[a-z][a-z0-9]*(_[a-z0-9]+)*
+loop-variable-name: _?[a-z][a-z0-9]*(_[a-z0-9]+)*
+# Members holding load()/preload() results may carry either the loaded type's
+# PascalCase name or ordinary member casing; preload() into a function-local
+# is a scene/script reference and keeps the PascalCase type name.
+class-load-variable-name: (([A-Z][a-z0-9]*)+|_?[a-z][a-z0-9]*(_[a-z0-9]+)*)
+load-constant-name: (([A-Z][a-z0-9]*)+|_?[A-Z][A-Z0-9]*(_[A-Z0-9]+)*)
+function-preload-variable-name: ([A-Z][a-z0-9]*)+
+
+# --- Script Structure ----------------------------------------------------
+# The style guide's prescribed script member order, mechanically enforced.
+# Keep this check enabled (quality/linting-and-formatting.md); reordering the
+# list is a style-contract change owned by
+# foundations/gdscript-style-and-typing.md, not a per-repo tweak.
+class-definitions-order:
+  - tools
+  - classnames
+  - extends
+  - docstrings
+  - signals
+  - enums
+  - consts
+  - staticvars
+  - exports
+  - pubvars
+  - prvvars
+  - onreadypubvars
+  - onreadyprvvars
+  - others
+
+# --- Complexity Limits -----------------------------------------------------
+# Upstream defaults. Tightening is a repo decision; never loosen a limit to
+# admit one function — refactor the function.
+function-arguments-number: 10   # more than this is a missing typed Resource or param object
+max-returns: 6
+max-public-methods: 20          # a wider surface is usually two nodes pretending to be one
+max-file-lines: 1000
+# 100 is the official style guide ceiling. Must equal `gdformat
+# --line-length`, or freshly formatted code fails lint
+# (quality/linting-and-formatting.md ### Configuration). tab-characters is
+# the column width a tab contributes to the line-length measurement.
+max-line-length: 100
+tab-characters: 1
+# gdlint has no cyclomatic-complexity check. `gdradon cc` (same toolkit)
+# reports it; treat gdradon output as advisory review input, not a gate.
+
+# --- Exclusions --------------------------------------------------------------
+# Lint first-party code only. addons/ is third-party vendored code
+# (foundations/project-setup.md owns the layout); linting code you do not own
+# produces findings you can only suppress. .godot/ is regenerable cache and
+# is already gitignored (templates/gitignore.txt).
+excluded_directories:
+  - .git
+  - .godot
+  - addons

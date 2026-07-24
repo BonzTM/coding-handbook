@@ -1,0 +1,117 @@
+# CI gate. Every command here is the SAME command you run locally — lint, test,
+# import, export — so a CI failure is always reproducible at a desk.
+# Contract, stage order, and export rules: ../operations/ci-and-release.md
+# First-time pipeline setup for a new repo: ../recipes/set-up-ci-export.md
+#
+# NOT on GitHub? The portable contract is the five stages in
+# ../operations/ci-and-release.md (format, lint, headless test, import, export)
+# run against the single pinned engine version. Replicate those commands in your
+# CI of choice; everything below is GitHub-specific plumbing around them.
+#
+# Destination: .github/workflows/ci.yml
+
+name: ci
+
+on:
+  push:
+    branches: [main] # default branch only; PR builds cover the rest
+  pull_request:
+
+# Least privilege. Read source; grant nothing else. Add scopes per-job only when
+# a job genuinely needs them (e.g. release publishing).
+permissions:
+  contents: read
+
+# THE version pin. Editor install, export templates, and local editors all
+# derive from this one value (../operations/ci-and-release.md). Current 4.x
+# stable line; check godotengine.org/download/archive/ when bumping, and bump
+# via its own PR through this full pipeline — never in passing.
+env:
+  GODOT_VERSION: "4.7.1"
+
+jobs:
+  # Cheapest stage first: no engine, seconds to fail. gdtoolkit is pinned to the
+  # exact version the repo uses locally (../quality/linting-and-formatting.md);
+  # an unpinned install is how local-green/CI-red churn starts. Format check and
+  # lint are SEPARATE steps so a lint failure always means a real finding, not
+  # whitespace. Scope both to first-party dirs — never lint vendored addons/.
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: pip3 install "gdtoolkit==<pinned-version>" # e.g. 4.3.2; match pre-commit rev
+      - run: gdformat --check <first-party-dirs> # read-only; fails on any would-be diff
+      - run: gdlint <first-party-dirs> # rules come from the committed .gdlintrc
+
+  # Headless test suite (../quality/testing.md). setup-godot installs the exact
+  # pinned editor; no templates needed to run tests. `--headless` is required on
+  # runners without GPU access, and `--import` must run first because .godot/ is
+  # gitignored — a fresh runner has no import cache.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: ${{ env.GODOT_VERSION }}
+          use-dotnet: false # true only for .NET-edition repos (../foundations/gdscript-vs-csharp.md)
+          include-templates: false
+      - run: godot --headless --import
+      # GUT gates on exit code alone — 0 pass, 1 fail — no output parsing.
+      - run: |
+          godot --headless -d -s --path "$PWD" addons/gut/gut_cmdln.gd \
+            -gdir=res://test/unit,res://test/integration -ginclude_subdirs -gexit
+      # gdUnit4 repos replace the GUT step with its runner and keep the report:
+      #   - run: GODOT_BIN=$(which godot) ./runtest.sh -a ./test
+      #   - uses: actions/upload-artifact@v4
+      #     if: always()
+      #     with: { name: test-report, path: reports/ }
+
+  # Export proof, one matrix entry per shipping preset — on every PR, not only
+  # on tags. An export that only happens at release time is an export that
+  # breaks at release time (../operations/ci-and-release.md). Preset names must
+  # match the committed export_presets.cfg EXACTLY; renaming a preset in the
+  # editor without updating this matrix exports a stale or missing preset.
+  # Signing material (keystores, passwords) is injected via CI secrets per
+  # preset — it never lives in the repo or the log.
+  export:
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # one broken platform must not hide the others
+      matrix:
+        include:
+          - preset: "Linux" # as written in export_presets.cfg
+            artifact: <game>-linux-x86_64
+          - preset: "Windows Desktop"
+            artifact: <game>-windows-x86_64.exe
+          # Add one entry per shipping preset. No "Web" entry for C# projects —
+          # C# cannot export to web (../operations/ci-and-release.md).
+    steps:
+      - uses: actions/checkout@v6
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: ${{ env.GODOT_VERSION }}
+          use-dotnet: false
+          include-templates: true # export templates, matching the pin exactly
+      - run: godot --headless --import
+      - run: |
+          mkdir -p build
+          godot --headless --export-release "${{ matrix.preset }}" "build/${{ matrix.artifact }}"
+      # Fail loudly: a green exit code is not proof. A misconfigured preset or
+      # missing template can leave errors in the log without a usable artifact,
+      # so assert the file exists and has plausible size before uploading.
+      - run: |
+          out="build/${{ matrix.artifact }}"
+          [ -f "$out" ] || { echo "export produced no artifact: $out"; exit 1; }
+          [ "$(stat -c%s "$out")" -gt 1048576 ] || { echo "artifact under 1 MiB — export likely failed: $out"; exit 1; }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.preset }}
+          path: build/
+
+# Release builds: tag v<MAJOR>.<MINOR>.<PATCH> and run these same export jobs
+# from the tag, naming artifacts <game>-<version>-<platform>.<ext> with
+# checksums. Ship only --export-release artifacts. The versioning and artifact
+# rules are owned by ../operations/ci-and-release.md (## Versioning And
+# Release Artifacts).
