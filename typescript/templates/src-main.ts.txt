@@ -1,0 +1,40 @@
+import { loadConfig } from "./config/index.js";
+import { buildApplication } from "./index.js";
+import { createLogger } from "./telemetry/logger.js";
+
+const SHUTDOWN_TIMEOUT_MS = <SHUTDOWN_TIMEOUT_MS>;
+
+async function run(): Promise<void> {
+  const config = loadConfig(process.env);
+  const logger = createLogger(config.LOG_LEVEL);
+  const lifetime = new AbortController();
+  const application = await buildApplication({ config, logger, signal: lifetime.signal });
+  let shutdownPromise: Promise<void> | undefined;
+
+  const shutdown = (signal: NodeJS.Signals): Promise<void> => {
+    if (shutdownPromise !== undefined) return shutdownPromise;
+    shutdownPromise = application.stop({ signal, timeoutMs: SHUTDOWN_TIMEOUT_MS });
+    lifetime.abort(new Error(`received ${signal}`));
+    return shutdownPromise;
+  };
+
+  for (const signal of ["SIGTERM", "SIGINT"] as const) {
+    process.once(signal, () => {
+      void shutdown(signal).then(
+        () => process.exit(0),
+        (error: unknown) => {
+          logger.fatal({ err: error }, "shutdown failed");
+          process.exit(1);
+        },
+      );
+    });
+  }
+
+  await application.start();
+}
+
+void run().catch((error: unknown) => {
+  // Startup may fail before the configured logger exists; never include config values here.
+  console.error("startup failed", error instanceof Error ? error.message : "unknown error");
+  process.exitCode = 1;
+});
