@@ -71,7 +71,7 @@ The full table, escalation rules, and forbidden packages live in [decisions/fram
 - `decisions/` ([README.md](decisions/README.md)) - ADRs plus dependency and framework selection rules
 - `checklists/` ([README.md](checklists/README.md)) and `recipes/` ([README.md](recipes/README.md)) - executable startup, review, release, handoff, and implementation guidance
 - `templates/` ([README.md](templates/README.md)) - committed copy-paste scaffolding (`pyproject.toml`, Makefile, `.python-version`, CI workflows, Dockerfile, source skeletons, and project docs); exact version pins live here and in the reference exemplar, not prose
-- `reference/` - [exampleservice](reference/exampleservice/), a complete `make verify`-green FastAPI+Postgres sidecar composing the handbook patterns end to end
+- `reference/` - [exampleservice](reference/exampleservice/), a complete `make verify`-green FastAPI sidecar composing the handbook patterns end to end with an explicitly scoped in-memory repository
 - Team process: [onboarding-and-handoff.md](onboarding-and-handoff.md), [checklists/incident-response.md](checklists/incident-response.md), [glossary.md](glossary.md), and [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## What This Handbook Optimizes For

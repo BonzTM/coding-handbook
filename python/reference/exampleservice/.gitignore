@@ -1,4 +1,3 @@
-# Destination: .gitignore.
 .venv/
 __pycache__/
 *.py[cod]

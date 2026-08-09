@@ -20,7 +20,7 @@ Read this file first: it carries the repo-wide invariants, the change-routing ta
 - Ruff, mypy, and import-boundary policy lives in [quality/linting.md](quality/linting.md); time and clock discipline in [foundations/time.md](foundations/time.md); copy-paste scaffolding and exact version pins in [templates/README.md](templates/README.md).
 - Architecture decisions and their rationale live in [decisions/architecture-decision-records.md](decisions/architecture-decision-records.md).
 - Team-process docs — [onboarding-and-handoff.md](onboarding-and-handoff.md), [CONTRIBUTING.md](CONTRIBUTING.md), [checklists/incident-response.md](checklists/incident-response.md), and [glossary.md](glossary.md) — serve humans running the team and handbook; they are not needed to build an app.
-- The complete worked example is [reference/exampleservice/](reference/exampleservice/), a `make verify`-green FastAPI+Postgres sidecar; mirror its shape instead of inventing one.
+- The complete worked example is [reference/exampleservice/](reference/exampleservice/), a `make verify`-green FastAPI sidecar with an in-memory repository behind a core-owned port; mirror its shape, and follow [services/database.md](services/database.md) when durable persistence is in scope.
 
 ## Fast Path
 

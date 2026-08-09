@@ -1,23 +1,24 @@
-"""Thin process entrypoint. Destination: src/<app>/__main__.py."""
+"""One-owner service logging configuration."""
 
 from __future__ import annotations
 
 import json
 import logging
 import logging.config
+from datetime import UTC, datetime
 
-import uvicorn
-
-from <app>.config import Settings, load_settings
-from <app>.main import create_app
+from exampleservice.config import Settings
 
 
 class JsonFormatter(logging.Formatter):
-    """Serialize service log records as one JSON object per line."""
+    """Serialize a stable, redacted service log envelope."""
 
     def format(self, record: logging.LogRecord) -> str:
+        """Render one JSON object per line."""
         payload: dict[str, object] = {
-            "level": record.levelname,
+            "timestamp": datetime.now(UTC).isoformat(),
+            "level": record.levelname.lower(),
+            "service": "exampleservice",
             "logger": record.name,
             "message": record.getMessage(),
         }
@@ -28,6 +29,7 @@ class JsonFormatter(logging.Formatter):
 
 def configure_logging(settings: Settings) -> None:
     """Configure the process logging graph once at composition."""
+    formatter = "json" if settings.log_json else "text"
     logging.config.dictConfig(
         {
             "version": 1,
@@ -35,32 +37,13 @@ def configure_logging(settings: Settings) -> None:
             "handlers": {
                 "console": {
                     "class": "logging.StreamHandler",
-                    "formatter": "json" if settings.log_json else "text",
+                    "formatter": formatter,
                 }
             },
             "formatters": {
-                "json": {"()": "<app>.__main__.JsonFormatter"},
+                "json": {"()": "exampleservice.telemetry.logging.JsonFormatter"},
                 "text": {"format": "%(levelname)s %(name)s %(message)s"},
             },
             "root": {"handlers": ["console"], "level": settings.log_level},
         }
     )
-
-
-def main() -> None:
-    """Validate settings, configure logging, and hand lifecycle to Uvicorn."""
-    settings = load_settings()
-    configure_logging(settings)
-    app = create_app(settings)
-    uvicorn.run(
-        app,
-        host=settings.http_host,
-        port=settings.http_port,
-        limit_concurrency=settings.http_concurrency,
-        timeout_keep_alive=settings.http_keep_alive_seconds,
-        timeout_graceful_shutdown=settings.shutdown_grace_seconds,
-    )
-
-
-if __name__ == "__main__":
-    main()

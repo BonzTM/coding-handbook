@@ -58,4 +58,4 @@ The Makefile is the single verification entrypoint. `make verify` runs lock-chec
 
 - Bootstrapping: [new-project checklist](../checklists/new-project.md)
 - Layout: [project setup](../foundations/project-setup.md)
-- Complete worked service: `reference/exampleservice/` lands in phase 2.
+- Complete worked service: [reference/exampleservice/](../reference/exampleservice/).

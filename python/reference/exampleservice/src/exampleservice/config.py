@@ -1,4 +1,4 @@
-"""Validated process settings. Destination: src/<app>/config.py."""
+"""Validated process settings."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """The complete settings graph, constructed once before startup."""
+    """Complete immutable settings graph, constructed once at startup."""
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -25,11 +25,15 @@ class Settings(BaseSettings):
     http_port: int = Field(default=8080, ge=1, le=65535)
     http_concurrency: int = Field(default=100, ge=1, le=10_000)
     http_keep_alive_seconds: int = Field(default=5, ge=1, le=300)
+    request_timeout_seconds: float = Field(default=5.0, gt=0, le=120)
     shutdown_grace_seconds: int = Field(default=15, ge=1, le=300)
-    database_url: SecretStr
     outbound_base_url: HttpUrl
-    outbound_timeout_seconds: float = Field(default=10.0, gt=0, le=120)
-    <required_field>: <type>
+    outbound_api_token: SecretStr
+    outbound_timeout_seconds: float = Field(default=2.0, gt=0, le=30)
+    outbound_max_attempts: int = Field(default=3, ge=1, le=5)
+    outbound_concurrency: int = Field(default=8, ge=1, le=100)
+    worker_concurrency: int = Field(default=2, ge=1, le=16)
+    worker_queue_size: int = Field(default=32, ge=1, le=1_000)
 
 
 def load_settings() -> Settings:
