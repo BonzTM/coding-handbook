@@ -5,7 +5,7 @@ Use this after spec intake to create a TypeScript repository.
 ## Scaffold
 
 - [ ] Copy applicable artifacts from [../templates/README.md](../templates/README.md) and replace every `<PLACEHOLDER>`.
-- [ ] Choose backend, frontend, worker, CLI, or library shape and remove unused template blocks.
+- [ ] Choose backend, frontend, worker, CLI, or library shape; compare the matching [service](../reference/exampleservice/), [worker](../reference/exampleworker/), or [frontend](../reference/examplefrontend/) exemplar; and remove unused template blocks.
 - [ ] `package.json`, `.nvmrc`, CI, and Docker agree on Node 24.
 - [ ] One npm package, `type: module`, and one committed `package-lock.json` exist.
 - [ ] Backend NodeNext or frontend Bundler tsconfig matches [project setup](../foundations/project-setup.md).

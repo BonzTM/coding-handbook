@@ -2,6 +2,8 @@
 
 Use this when adding a React Router page boundary.
 
+Reference implementation: [examplefrontend](../reference/examplefrontend/).
+
 ## Files To Touch
 
 - `src/routes/<name>-route.tsx`

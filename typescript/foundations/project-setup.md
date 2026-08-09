@@ -4,7 +4,7 @@ Standard repository shape for TypeScript services, workers, libraries, and React
 
 ## Default Approach
 
-Start with one npm package, one deployable, ESM, Node.js 24 LTS, and TypeScript 7, the current stable compiler. Node.js 26 is Current, but Current is not the production pin.
+Start with one npm package, one deployable, ESM, Node.js 24 LTS, and the newest TypeScript compiler supported by the pinned type-aware lint toolchain. The current template uses TypeScript 6 because typescript-eslint 8 does not support TypeScript 7; do not bypass peer compatibility to claim a newer compiler. Node.js 26 is Current, but Current is not the production pin.
 
 ### Runtime And Package Contract
 

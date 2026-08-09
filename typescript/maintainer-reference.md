@@ -90,6 +90,8 @@ Jest uses Babel to transform TypeScript to CommonJS only inside the test runtime
 
 `npm run verify` is canonical and runs format check, typed lint, typecheck, deterministic Jest tests, audit policy, and build. CI performs `npm ci` before the script. Integration runs separately with pinned real dependencies. The Makefile is a shim and does not duplicate policy.
 
+The executable proofs are [exampleservice](reference/exampleservice/) for Fastify and PostgreSQL, [exampleworker](reference/exampleworker/) for bounded event processing, and [examplefrontend](reference/examplefrontend/) for React, routing, TanStack Query, accessible forms, MSW, and static assets. Each package owns a committed lockfile and runs the canonical gate independently.
+
 The narrowest meaningful test runs first. Broader proof follows the blast radius: contract changes need mixed-version fixtures, persistence changes need PostgreSQL, UI changes need accessibility behavior, libraries need pack/install, and lifecycle changes need a built-process smoke test.
 
 ## Troubleshooting

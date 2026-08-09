@@ -2,6 +2,8 @@
 
 Use this when a React feature accepts and submits user input.
 
+Reference implementation: [examplefrontend](../reference/examplefrontend/).
+
 ## Files To Touch
 
 - the owning form component under `src/features/<feature>/`

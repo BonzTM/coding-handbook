@@ -37,13 +37,15 @@ Voice is terse, opinionated, contract-not-tutorial. Cross-link only files that e
 
 ### Keep The Reference Packages Green
 
-Phase 2 reference packages are executable proof. Once they exist, run the gate from each changed or affected package:
+The three reference packages are executable proof. Run the gate from each changed or affected package:
 
 ```bash
-npm run verify   # from each typescript/reference/* package
+(cd reference/exampleservice && npm run verify)
+(cd reference/exampleworker && npm run verify)
+(cd reference/examplefrontend && npm run verify)
 ```
 
-Until phase 2 lands, validate template syntax, internal links, indexes, and byte-level config agreement directly. Never claim an absent exemplar was executed.
+Also validate template syntax, internal links, indexes, and byte-level config agreement directly. Never claim an exemplar gate was executed when it was not.
 
 ### Changing An Invariant Requires An ADR
 
@@ -58,16 +60,16 @@ Repo-wide invariants in [AGENTS.md](AGENTS.md) and Non-Negotiables in [README.md
 - Publishing unverified package versions, flags, config keys, commands, or URLs.
 - Letting Jest transform behavior define production ESM behavior.
 - Changing tsconfig, ESLint, or Jest prose without byte-consistent templates.
-- Claiming phase 2 reference proof before the reference package exists.
+- Claiming reference-package proof without running the applicable package gate.
 
 ## Verification And Proof
 
-- All internal Markdown links resolve, except explicitly identified phase 2 `reference/*` paths.
+- All internal Markdown links resolve.
 - AGENTS, maintainer reference, recipes, checklists, and templates agree.
 - Directory indexes enumerate every recipe, checklist, template, and decision artifact.
 - JSON, YAML, JavaScript, Docker, Make, and TypeScript template syntax is checked with applicable local tools.
 - Tooling claims cite current official documentation and exact pins are recorded in [templates/README.md](templates/README.md).
-- Once reference packages exist, `npm run verify` is green in every affected `typescript/reference/*` package.
+- `npm run verify` is green in every affected `typescript/reference/*` package.
 - An invariant change links an accepted ADR.
 - The PR follows [foundations/git-workflow.md](foundations/git-workflow.md).
 

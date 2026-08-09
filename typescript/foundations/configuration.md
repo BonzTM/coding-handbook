@@ -31,12 +31,12 @@ const portSchema = z
 
 const envSchema = z.strictObject({
   NODE_ENV: z.enum(["development", "test", "production"]),
-  PORT: portSchema.default("3000"),
+  PORT: portSchema.prefault("3000"),
   DATABASE_URL: z.url(),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
   FEATURE_WIDGET_V2: z
     .enum(["true", "false"])
-    .default("false")
+    .prefault("false")
     .transform((value) => value === "true"),
 });
 

@@ -2,6 +2,8 @@
 
 Use this when reusable stateful behavior belongs in a hook.
 
+Reference implementation: [examplefrontend](../reference/examplefrontend/).
+
 ## Files To Touch
 
 - `src/hooks/use-<name>.ts` for genuinely shared behavior, or the owning `src/features/<feature>/` directory

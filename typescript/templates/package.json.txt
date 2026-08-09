@@ -21,29 +21,30 @@
   },
   "dependencies": {
     "fastify": "5.11.3",
+    "fastify-type-provider-zod": "6.1.0",
     "node-pg-migrate": "9.0.0",
     "pg": "8.22.0",
     "pino": "10.3.1",
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@babel/core": "8.0.1",
-    "@babel/preset-env": "8.0.2",
-    "@babel/preset-typescript": "8.0.1",
-    "@eslint/js": "10.0.1",
+    "@babel/core": "7.29.7",
+    "@babel/preset-env": "7.29.7",
+    "@babel/preset-typescript": "7.29.7",
+    "@eslint/js": "9.39.5",
     "@jest/globals": "30.4.1",
     "@testcontainers/postgresql": "12.0.4",
     "@types/node": "24.13.3",
     "@types/pg": "8.20.0",
     "babel-jest": "30.4.1",
-    "eslint": "10.8.0",
+    "eslint": "9.39.5",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-jsx-a11y": "6.10.2",
     "eslint-plugin-react-hooks": "7.1.1",
     "globals": "17.7.0",
     "jest": "30.4.2",
     "prettier": "3.9.6",
-    "typescript": "7.0.2",
+    "typescript": "6.0.3",
     "typescript-eslint": "8.65.0"
   }
 }

@@ -18,7 +18,7 @@ Read this file first; use [maintainer-reference.md](maintainer-reference.md) for
 - Runtime correctness lives in [foundations/async-and-cancellation.md](foundations/async-and-cancellation.md), [foundations/errors-and-logging.md](foundations/errors-and-logging.md), [foundations/configuration.md](foundations/configuration.md), and [foundations/time.md](foundations/time.md).
 - Proof and lint policy live in [quality/testing.md](quality/testing.md) and [quality/linting.md](quality/linting.md).
 - Binding dependency decisions live in [decisions/framework-selection.md](decisions/framework-selection.md); hard-to-reverse exceptions require [decisions/architecture-decision-records.md](decisions/architecture-decision-records.md).
-- Worked examples will live at [reference/exampleservice/](reference/exampleservice/), [reference/exampleworker/](reference/exampleworker/), and [reference/examplefrontend/](reference/examplefrontend/).
+- Worked examples live at [reference/exampleservice/](reference/exampleservice/), [reference/exampleworker/](reference/exampleworker/), and [reference/examplefrontend/](reference/examplefrontend/).
 
 ## Fast Path
 

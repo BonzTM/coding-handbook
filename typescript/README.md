@@ -6,7 +6,7 @@ This handbook is the default engineering contract for new TypeScript repositorie
 
 - Humans: read this file, then follow the reading path for the project shape.
 - Agents: read [AGENTS.md](AGENTS.md), route the change, then read the named topical docs and recipes.
-- Defaults: one npm package, Node.js 24 LTS, ESM, TypeScript 7, strict type checking, Zod at trust boundaries, and `npm run verify` as the canonical gate.
+- Defaults: one npm package, Node.js 24 LTS, ESM, the newest TypeScript compiler supported by the pinned type-aware lint toolchain, strict type checking, Zod at trust boundaries, and `npm run verify` as the canonical gate.
 
 ## Reading Paths
 
@@ -65,7 +65,7 @@ See [decisions/framework-selection.md](decisions/framework-selection.md) for rat
 - `operations/` — observability, resilience, deployment, operability, security, data handling, CI, and release.
 - `decisions/` — ADR and framework-selection rules.
 - [checklists/README.md](checklists/README.md), [recipes/README.md](recipes/README.md), and [templates/README.md](templates/README.md) — executable guidance and scaffolding.
-- `reference/` — planned compiling service, worker, and frontend exemplars.
+- `reference/` — verify-green [service](reference/exampleservice/), [worker](reference/exampleworker/), and [frontend](reference/examplefrontend/) exemplars.
 - Team process: [onboarding-and-handoff.md](onboarding-and-handoff.md), [glossary.md](glossary.md), and [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## What This Handbook Optimizes For

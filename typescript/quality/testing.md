@@ -32,7 +32,7 @@ The backend baseline uses Jest 30 with `babel-jest`, `@babel/preset-env`, and `@
 module.exports = {
   presets: [
     ["@babel/preset-env", { targets: { node: "24" }, modules: "commonjs" }],
-    ["@babel/preset-typescript", { allowDeclareFields: true }],
+    "@babel/preset-typescript",
   ],
 };
 ```

@@ -2,6 +2,8 @@
 
 Use this when adding one reusable React 19 component.
 
+Reference implementation: [examplefrontend](../reference/examplefrontend/).
+
 ## Files To Touch
 
 - `src/components/<name>/<name>.tsx` for shared UI, or `src/features/<feature>/` for feature-owned UI

@@ -23,7 +23,7 @@ The lockfile diff is part of the review. Package popularity is not a substitute 
 | Concern | Default and rationale | Reach for something else when |
 |---|---|---|
 | Runtime | Node.js 24 LTS: stable production line with built-in fetch, Web Streams, AbortController, test runner, env-file support, and a stable permission model | the organization mandates another runtime and its compatibility is proven |
-| Compiler | current stable TypeScript (7.0 at verification time), locally pinned; `tsc` owns type checking and backend emission | a frontend framework owns emit; `tsc --noEmit` still gates types |
+| Compiler | newest TypeScript supported by the pinned type-aware lint toolchain, locally pinned (currently TypeScript 6.0.3 because typescript-eslint 8 does not support TypeScript 7, which is current stable at verification time); `tsc` owns type checking and backend emission | a frontend framework owns emit; `tsc --noEmit` still gates types |
 | Modules | ESM-only, `type: module`, NodeNext on backend and bundler resolution on frontend | publishing consumers require multiple formats, via ADR and export tests |
 | Package manager | npm with committed `package-lock.json`; `npm ci` in CI | workspace scale and measured constraints justify pnpm; never mix lockfiles |
 | HTTP framework | Fastify v5: explicit plugin encapsulation, hooks, schemas, injection testing, and Pino integration | Express 5 compatibility is required by inherited middleware or platform conventions |

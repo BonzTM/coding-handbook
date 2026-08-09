@@ -8,7 +8,9 @@ A filename may encode its destination when the literal name would be awkward in 
 
 ## Version Pins
 
-The package template pins direct dependencies verified on 2026-08-09. Treat the manifest and generated lockfile as one reviewed unit. Runtime surfaces use Node `24.18.0`, TypeScript `7.0.2`, Fastify `5.11.3`, Zod `4.4.3`, Pino `10.3.1`, `pg` `8.22.0`, `node-pg-migrate` `9.0.0`, Jest `30.4.2`, Testcontainers PostgreSQL `12.0.4`, typescript-eslint `8.65.0`, ESLint `10.8.0`, and Prettier `3.9.6`. Verify current compatibility through [Node releases](https://nodejs.org/en/about/previous-releases), [npm package metadata](https://www.npmjs.com/), and the governing docs before refreshing a pin.
+The package template pins direct dependencies verified on 2026-08-09. Treat the manifest and generated lockfile as one reviewed unit. Runtime surfaces use Node `24.18.0`, TypeScript `6.0.3` (the newest compiler supported by typescript-eslint `8.65.0`), Fastify `5.11.3`, fastify-type-provider-zod `6.1.0`, Zod `4.4.3`, Pino `10.3.1`, `pg` `8.22.0`, `node-pg-migrate` `9.0.0`, Jest `30.4.2` with Babel `7.29.7`, Testcontainers PostgreSQL `12.0.4`, ESLint `9.39.5` (the newest line supported by jsx-a11y `6.10.2`), and Prettier `3.9.6`. The frontend reference additionally pins React `19.2.8`, Vite `8.2.1`, `@vitejs/plugin-react` `6.0.5`, React Router `7.18.2`, TanStack Query `5.101.4`, and MSW `2.15.0`. Verify current compatibility through [Node releases](https://nodejs.org/en/about/previous-releases), [npm package metadata](https://www.npmjs.com/), and the governing docs before refreshing a pin.
+
+Use [exampleservice](../reference/exampleservice/) for the complete backend assembly, [exampleworker](../reference/exampleworker/) for the event-worker assembly, and [examplefrontend](../reference/examplefrontend/) for the React/Vite variant. Templates are intentionally shape-neutral where the reference packages need different composition.
 
 ## Project Baseline
 

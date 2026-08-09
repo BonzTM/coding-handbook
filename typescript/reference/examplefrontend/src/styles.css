@@ -1,0 +1,53 @@
+:root {
+  color: #172033;
+  background: #f5f7fa;
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+header,
+main {
+  margin: 0 auto;
+  max-width: 52rem;
+  padding: 1rem;
+}
+
+section {
+  background: white;
+  border: 1px solid #ccd3df;
+  border-radius: 0.5rem;
+  margin-block: 1rem;
+  padding: 1rem;
+}
+
+label,
+input,
+textarea {
+  display: block;
+}
+
+input,
+textarea {
+  box-sizing: border-box;
+  margin-block: 0.25rem 0.75rem;
+  max-width: 32rem;
+  padding: 0.5rem;
+  width: 100%;
+}
+
+button,
+a {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid #2855d9;
+  outline-offset: 2px;
+}
+
+[aria-invalid="true"] {
+  border-color: #a40000;
+}
