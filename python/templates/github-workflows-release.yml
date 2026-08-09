@@ -1,0 +1,50 @@
+# Protected tag release. Destination: .github/workflows/release.yml.
+# Select exactly one artifact path with repository variables.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  publish-python:
+    if: ${{ vars.PUBLISH_PYPI == 'true' }}
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v9
+        with:
+          enable-cache: true
+      - run: make verify
+      - run: uv build --no-sources
+      - run: uv run --with ./dist/*.whl --no-project -- python -c "import <package>"
+      - run: uv publish
+
+  publish-image:
+    if: ${{ vars.PUBLISH_IMAGE == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v9
+        with:
+          enable-cache: true
+      - run: make verify
+      - name: Log in to ghcr.io
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: Build and push immutable release image
+        run: |
+          CREATED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          IMAGE="ghcr.io/<org>/<repo>:${GITHUB_REF_NAME}"
+          docker build \
+            --build-arg VERSION="${GITHUB_REF_NAME}" \
+            --build-arg COMMIT="${GITHUB_SHA}" \
+            --build-arg CREATED="${CREATED}" \
+            -t "${IMAGE}" .
+          docker push "${IMAGE}"

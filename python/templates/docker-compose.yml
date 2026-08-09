@@ -1,0 +1,57 @@
+# Local app + real PostgreSQL. Destination: docker-compose.yml.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: <app>
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d <app>"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  migrate:
+    build:
+      context: .
+      args:
+        VERSION: 0.0.0-dev
+        COMMIT: local
+    entrypoint: ["alembic"]
+    command: ["upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://app:app@postgres:5432/<app>
+    restart: "no"
+
+  service:
+    build:
+      context: .
+      args:
+        VERSION: 0.0.0-dev
+        COMMIT: local
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      APP_ENV: local
+      LOG_LEVEL: DEBUG
+      LOG_JSON: "false"
+      HTTP_HOST: 0.0.0.0
+      HTTP_PORT: "8080"
+      DATABASE_URL: postgresql+asyncpg://app:app@postgres:5432/<app>
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:

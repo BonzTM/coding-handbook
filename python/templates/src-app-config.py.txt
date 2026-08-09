@@ -1,0 +1,32 @@
+"""Validated process settings. Destination: src/<app>/config.py."""
+
+from __future__ import annotations
+
+from typing import Literal
+
+from pydantic import Field, HttpUrl, SecretStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    """The complete settings graph, constructed once before startup."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="forbid",
+        frozen=True,
+    )
+
+    app_env: Literal["local", "test", "staging", "production"] = "local"
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    log_json: bool = False
+    http_host: str = "127.0.0.1"
+    http_port: int = Field(default=8080, ge=1, le=65535)
+    http_concurrency: int = Field(default=100, ge=1, le=10_000)
+    http_keep_alive_seconds: int = Field(default=5, ge=1, le=300)
+    shutdown_grace_seconds: int = Field(default=15, ge=1, le=300)
+    database_url: SecretStr
+    outbound_base_url: HttpUrl
+    outbound_timeout_seconds: float = Field(default=10.0, gt=0, le=120)
+    <required_field>: <type>

@@ -1,0 +1,27 @@
+# Destination: .dockerignore. Keep build context deterministic and secret-free.
+.git
+.github
+.venv
+.mypy_cache
+.pytest_cache
+.ruff_cache
+__pycache__
+*.py[cod]
+.env
+.env.*
+!.env.example
+dist
+build
+htmlcov
+.coverage
+coverage.xml
+tests
+docs
+*.md
+!README.md
+Dockerfile
+.dockerignore
+docker-compose*.yml
+.idea
+.vscode
+.DS_Store

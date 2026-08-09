@@ -1,0 +1,19 @@
+# Destination: .gitignore.
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+dist/
+build/
+.env
+.env.*
+!.env.example
+.idea/
+.vscode/
+.DS_Store

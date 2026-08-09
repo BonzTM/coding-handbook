@@ -1,0 +1,66 @@
+"""Thin process entrypoint. Destination: src/<app>/__main__.py."""
+
+from __future__ import annotations
+
+import json
+import logging
+import logging.config
+
+import uvicorn
+
+from <app>.config import Settings
+from <app>.main import create_app
+
+
+class JsonFormatter(logging.Formatter):
+    """Serialize service log records as one JSON object per line."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        payload: dict[str, object] = {
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+        if record.exc_info is not None:
+            payload["exception"] = self.formatException(record.exc_info)
+        return json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
+
+
+def configure_logging(settings: Settings) -> None:
+    """Configure the process logging graph once at composition."""
+    logging.config.dictConfig(
+        {
+            "version": 1,
+            "disable_existing_loggers": False,
+            "handlers": {
+                "console": {
+                    "class": "logging.StreamHandler",
+                    "formatter": "json" if settings.log_json else "text",
+                }
+            },
+            "formatters": {
+                "json": {"()": "<app>.__main__.JsonFormatter"},
+                "text": {"format": "%(levelname)s %(name)s %(message)s"},
+            },
+            "root": {"handlers": ["console"], "level": settings.log_level},
+        }
+    )
+
+
+def main() -> None:
+    """Validate settings, configure logging, and hand lifecycle to Uvicorn."""
+    settings = Settings()
+    configure_logging(settings)
+    app = create_app(settings)
+    uvicorn.run(
+        app,
+        host=settings.http_host,
+        port=settings.http_port,
+        limit_concurrency=settings.http_concurrency,
+        timeout_keep_alive=settings.http_keep_alive_seconds,
+        timeout_graceful_shutdown=settings.shutdown_grace_seconds,
+    )
+
+
+if __name__ == "__main__":
+    main()
