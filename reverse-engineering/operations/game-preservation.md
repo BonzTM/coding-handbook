@@ -49,13 +49,14 @@ Reading your own client's cooked content for preservation is interoperability/ar
 
 ### Anti-Cheat At End Of Life
 
-This is where preservation and circumvention are easy to confuse. The honest picture:
+This is where preservation and circumvention are easy to confuse, and the line does not depend on your intent — it depends on whether you are implementing a server or altering a protection on the client. Two cases that look alike behave very differently:
 
-- **Server-gated anti-cheat is usually self-resolving.** Most online anti-cheat authenticates against the vendor or game backend at startup. When that backend is gone, the anti-cheat often cannot initialize, so it is a symptom of the dead server, not a separate wall. The preservation fix is the re-implemented server handling (or standing in for) the anti-cheat handshake the client expects — reconstructed, like any other message, from recordings and the client's own logic. That is protocol work under [../techniques/network-protocol-analysis.md](../techniques/network-protocol-analysis.md), not tampering with the protection.
-- **The legitimate routes when the client still refuses to run:** an official end-of-life build from the publisher with the protection removed, explicit permission from the rights holder, or working with an eligible preservation institution operating under the broader archive exemption. For a game a publisher has abandoned, a direct request for an EOL build or permission is often the fastest and safest path, and it is the route preservation communities and the rights holder can both stand behind.
-- **What this handbook does not document:** step-by-step defeat, disabling, patching-out, or evasion of an active anti-cheat or integrity check. That content functions as a circumvention guide whatever the stated purpose, it is excluded by the repo-wide invariants in [../AGENTS.md](../AGENTS.md#repo-wide-invariants) and REA's disclaimer, and even the preservation exemption's local-gameplay limit does not clearly authorize it. If the only way forward is through an active protection, the next step is a rights-holder conversation, not a bypass.
+- **Game-backend handshake — reconstructable, in scope.** Where the client's startup conversation is with the *game's own* backend (a login, session, or entitlement exchange the game server used to answer), a dead server is the only wall. The preservation fix is to re-implement that server side and answer the exchange, reconstructed like any other message from recordings and the client's reader. You build a server; the client's own code runs and is satisfied; nothing on the client is touched. That is protocol work under [../techniques/network-protocol-analysis.md](../techniques/network-protocol-analysis.md), on interoperability footing.
+- **Vendor attestation or local integrity — not reconstructable, out of scope.** A third-party anti-cheat (EAC, BattlEye, and the like) usually does not merely talk to the game backend. Its module attests cryptographically against the *vendor's* own servers — which may outlive the game, or be impossible to answer without the vendor's keys — and may also enforce client-side integrity (memory, code-signing, process checks) that no server reply relaxes. You cannot reconstruct a vendor attestation from captures, and forging it, or patching out a local integrity check so the client proceeds, is circumventing the protection, not implementing a server. This handbook does not document that: no step-by-step defeat, disabling, patching-out, forging, or evasion of an active anti-cheat or integrity check. It functions as a circumvention guide whatever the stated purpose, it is excluded by the repo-wide invariants in [../AGENTS.md](../AGENTS.md#repo-wide-invariants) and REA's disclaimer, and the preservation exemption's local-gameplay limit does not clearly authorize it.
+- **Telling the two apart.** Trace the startup conversation statically ([../techniques/static-binary-analysis.md](../techniques/static-binary-analysis.md#find-the-networking-layer)) and in recordings: does the client proceed once a server it talks to returns the right bytes, or does its own code refuse regardless of any reply? The first is a handshake you may answer; the second is a protection you may not touch. Real games mix both, so classify per check, not per game.
+- **The legitimate route when a protection — not a dead server — is the wall:** an official end-of-life build from the publisher with the protection removed, explicit permission from the rights holder, or an eligible preservation institution operating under the broader archive exemption. For an abandoned game, a direct request for an EOL build or permission is often the fastest, safest path, and the one a rights holder can stand behind. The next step is that conversation, not a bypass.
 
-Kernel-mode anti-cheat adds a further reason to stop: preservation of a game you own does not justify loading or defeating a kernel driver on a machine, and such drivers are a security and stability risk in a lab regardless.
+Kernel-mode anti-cheat is squarely the second case: preservation of a game you own does not justify loading or defeating a kernel driver, and such drivers are a security and stability risk in a lab regardless.
 
 ### Durability
 
@@ -72,7 +73,8 @@ Keep the game's own bytes (binaries, assets, keys, captures) in a personal archi
 
 - Treating "preservation" as a blanket license; the local-gameplay clause excludes online-service restoration, and the basis must be recorded per activity.
 - Standing up a replacement service for others without checking who you are (individual vs. eligible institution), your jurisdiction, and rights-holder cooperation.
-- Documenting or performing defeat/disable/evasion of an active anti-cheat or integrity check under a preservation label.
+- Documenting or performing forge/defeat/disable/patch-out/evasion of an active anti-cheat or integrity check under a preservation label.
+- Treating a vendor attestation or a local integrity check as a "handshake" your server may answer; only a game-backend exchange the client proceeds on is reconstructable.
 - Patching the client's code to redirect it when configuration, DNS, or a local resolver would do.
 - Redistributing game binaries, assets, or recovered keys as part of "preservation".
 - Presenting a reconstructed server rule as the publisher's actual implementation instead of an inference from client evidence.
@@ -83,7 +85,7 @@ Keep the game's own bytes (binaries, assets, keys, captures) in a personal archi
 - `scope.md` states the preservation purpose, that servers are discontinued (with how that was established and for how long), whether you are an individual or an eligible institution, and the legal basis per activity.
 - The server re-implementation builds from the protocol specs and cites them; it contains no publisher server code.
 - Client redirection is in configuration/DNS, not a client-code patch, or the exception is recorded with its basis.
-- No ledger row, recipe step, or note describes circumventing an active anti-cheat or integrity check.
+- Each startup/anti-cheat check is classified as a game-backend handshake or a vendor attestation / local integrity check; only game-backend handshakes are answered in the server, and no ledger row, recipe step, or note describes forging or circumventing an active anti-cheat or integrity check.
 - `git ls-files` shows no game binaries, assets, keys, or captures; the durable archive holds them with hashes outside git.
 
 ## Where To Go Next
