@@ -1,14 +1,14 @@
 # Static Binary Analysis
 
-How to analyze a UE5 shipping executable with an agent through REA and Ghidra: separate engine code from game code, port engine symbols from a self-built twin, find reflection and networking anchors, locate message writers and readers, and keep every result as Evidence.
+How to analyze a large stripped binary with an agent through REA and Ghidra: separate shared/library code from the target's own code, port symbols from a self-built twin, find the anchors that orient the rest, locate message writers and readers, and keep every result as Evidence. The worked example is a UE5 shipping executable; the engine-source and reflection specifics are the game case and point to the games section.
 
 ## Default Approach
 
-A UE5 shipping executable is mostly engine. The game-specific code is a minority, and the engine half can be named almost completely from the matching engine source. Name the engine first, then the game code becomes the unnamed remainder, and reflection names most of that. Do all of it statically through REA; every result returns as Evidence the ledger can cite.
+A large shipped binary is mostly code you did not write — a runtime, an engine, vendored libraries. That part can usually be named from matching source or a symbol-rich twin build; name it first, and the target's own code becomes the unnamed remainder worth the attention. A UE5 executable is the extreme case: mostly engine, with the game-specific code a minority that reflection then names ([../domains/games/unreal-engine-internals.md](../domains/games/unreal-engine-internals.md)). Do all of it statically through REA; every result returns as Evidence the ledger can cite.
 
 ### Session Discipline
 
-- One REA session per build, opened from the snapshot ([../recipes/open-the-client-in-rea.md](../recipes/open-the-client-in-rea.md)).
+- One REA session per build, opened from the snapshot ([../recipes/open-a-target-in-rea.md](../recipes/open-a-target-in-rea.md)).
 - At session start: apply `builds/<build-id>/names.json` with `set_addresses_names`, then read `findings.md` and `list_unknowns`.
 - One hypothesis per batch of calls. "The function that references `ServerMove` builds the movement RPC" is a hypothesis; "explore networking" is not.
 - At session end: `export_evidence_bundle`, update `names.json` and `findings.md`, `close_binary`.
@@ -17,7 +17,7 @@ A UE5 shipping executable is mostly engine. The game-specific code is a minority
 
 The highest-leverage static technique for UE5:
 
-1. Check out the engine source tag matching the fingerprint ([../foundations/unreal-engine-internals.md](../foundations/unreal-engine-internals.md#get-the-matching-engine-source)).
+1. Check out the engine source tag matching the fingerprint ([../domains/games/unreal-engine-internals.md](../domains/games/unreal-engine-internals.md#get-the-matching-engine-source)).
 2. Build a blank project as Win64 Shipping with the same engine version and, where known, the same compiler toolset. Keep the PDB.
 3. Analyze the twin in Ghidra with its PDB.
 4. Correlate twin and target with Ghidra Version Tracking, which ports "comments and labels into the new context". BinDiff can also "port symbols and comments between disassemblies" and "ships with support for IDA Pro, Binary Ninja and Ghidra" (`github.com/google/bindiff`).
@@ -80,5 +80,5 @@ For each message in the ledger, find both directions:
 ## Where To Go Next
 
 - [network-protocol-analysis.md](network-protocol-analysis.md) — confirming static findings against traffic.
-- [blueprint-analysis.md](blueprint-analysis.md) — logic that lives in assets, not the executable.
-- [../recipes/open-the-client-in-rea.md](../recipes/open-the-client-in-rea.md) — session setup.
+- [../domains/games/blueprint-analysis.md](../domains/games/blueprint-analysis.md) — logic that lives in assets, not the executable.
+- [../recipes/open-a-target-in-rea.md](../recipes/open-a-target-in-rea.md) — session setup.

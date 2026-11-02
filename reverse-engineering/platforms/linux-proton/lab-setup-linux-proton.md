@@ -8,7 +8,7 @@ Proton changes less than it seems. The game is still a Windows PE executable, it
 
 ### Package Baseline
 
-Install from the distro repositories where possible (`pacman -S`), and record versions in [../decisions/tooling.md](../decisions/tooling.md):
+Install from the distro repositories where possible (`pacman -S`), and record versions in [../../decisions/tooling.md](../../decisions/tooling.md):
 
 | Need | Package or source | Notes |
 |---|---|---|
@@ -36,10 +36,10 @@ Find the app ID with `protontricks -l` or `protontricks -s <name>`; both are doc
 
 Never install RE tools into the game's prefix. The game prefix is what the game, its launcher and any anti-cheat see.
 
-- **Game prefix** — untouched except for what a deliberate, gated runtime session needs ([../checklists/runtime-session-gate.md](../checklists/runtime-session-gate.md)).
+- **Game prefix** — untouched except for what a deliberate, gated runtime session needs ([../../checklists/runtime-session-gate.md](../../checklists/runtime-session-gate.md)).
 - **Tools prefix** — a separate Wine prefix (`WINEPREFIX=~/re/tools-prefix`) for FModel, UAssetGUI, and other Windows-only static tools. These tools read files; they never need to share a prefix with the game.
 
-`protontricks-launch --appid <appid> <tool.exe>` runs an executable inside the game's prefix (`protontricks-launch --help`). Reserve it for the rare gated case that needs the game's prefix; it is denied to agents by default in [../templates/re-workspace-agents.md](../templates/re-workspace-agents.md).
+`protontricks-launch --appid <appid> <tool.exe>` runs an executable inside the game's prefix (`protontricks-launch --help`). Reserve it for the rare gated case that needs the game's prefix; it is denied to agents by default in [../../templates/re-workspace-agents.md](../../templates/re-workspace-agents.md).
 
 ### Snapshot Before Anything Runs
 
@@ -57,11 +57,11 @@ A Proton game runs as an ordinary Linux process tree, and its connections are vi
 
 - `ss -tunap | grep -i <exe-name>` lists the client's TCP/UDP sockets and remote endpoints while it runs. Confirm this on your host during the first gated session and record it as an observation.
 - `dumpcap -i <iface> -f "host <server-ip>" -w captures/<build-id>-<action>.pcapng` captures them. Capture permissions on Arch come from the `wireshark` group set up by the `wireshark-cli` package; add the user to the group rather than running capture as root.
-- HTTPS interception with mitmproxy needs the client to trust mitmproxy's CA. Methods and limits live in [../techniques/network-protocol-analysis.md](../techniques/network-protocol-analysis.md#tls-and-the-http-backend).
+- HTTPS interception with mitmproxy needs the client to trust mitmproxy's CA. Methods and limits live in [../../techniques/network-protocol-analysis.md](../../techniques/network-protocol-analysis.md#tls-and-the-http-backend).
 
 ### Debugger And ptrace Policy
 
-Yama controls ptrace "through sysctls in /proc/sys/kernel/yama". At `ptrace_scope` `1` (restricted), attaching needs "a predefined relationship with the inferior", such as being its parent (`docs.kernel.org/admin-guide/LSM/Yama.html`). The reference CachyOS host reads `1`. Valve's Proton debugging guide says attaching GDB to a running `.exe` "works out of the box" and documents `PROTON_WAIT_ATTACH=1 %command%` to pause the game until a debugger attaches (`github.com/ValveSoftware/Proton/blob/proton_11.0/docs/DEBUGGING-LINUX.md`). Test attach under your host's `ptrace_scope` before relying on it; do not lower `ptrace_scope` permanently. Debugging methods live in [../techniques/dynamic-analysis-under-proton.md](../techniques/dynamic-analysis-under-proton.md).
+Yama controls ptrace "through sysctls in /proc/sys/kernel/yama". At `ptrace_scope` `1` (restricted), attaching needs "a predefined relationship with the inferior", such as being its parent (`docs.kernel.org/admin-guide/LSM/Yama.html`). The reference CachyOS host reads `1`. Valve's Proton debugging guide says attaching GDB to a running `.exe` "works out of the box" and documents `PROTON_WAIT_ATTACH=1 %command%` to pause the game until a debugger attaches (`github.com/ValveSoftware/Proton/blob/proton_11.0/docs/DEBUGGING-LINUX.md`). Test attach under your host's `ptrace_scope` before relying on it; do not lower `ptrace_scope` permanently. Debugging methods live in [dynamic-analysis-under-proton.md](dynamic-analysis-under-proton.md).
 
 ### REA And Ghidra Provider
 
@@ -83,7 +83,7 @@ UE5 shipping executables are large; three UE5 titles on the reference host range
 | `REA_GHIDRA_STARTUP_TIMEOUT_MS` | Deadline for import plus auto-analysis. REA's remediation text: "Large binaries can need longer". |
 | `REA_GHIDRA_DISABLED_ANALYZERS` | Skips named expensive Ghidra analyzers. Changing it changes the analysis profile, so a snapshot made under one value does not reopen under another. |
 
-REA also warns that "an MCP client's own tool-call timeout is separate and may also need raising". Run the first analysis from a shell instead of through the agent's MCP call, so no client timeout applies: `rea decompile <exe> <known-function-or-address> --provider ghidra --snapshot <path>` in a background terminal. Later agent sessions open the same snapshot. Procedure: [../recipes/open-the-client-in-rea.md](../recipes/open-the-client-in-rea.md).
+REA also warns that "an MCP client's own tool-call timeout is separate and may also need raising". Run the first analysis from a shell instead of through the agent's MCP call, so no client timeout applies: `rea decompile <exe> <known-function-or-address> --provider ghidra --snapshot <path>` in a background terminal. Later agent sessions open the same snapshot. Procedure: [../../recipes/open-a-target-in-rea.md](../../recipes/open-a-target-in-rea.md).
 
 ## Common Mistakes And Forbidden Patterns
 
@@ -108,6 +108,6 @@ The lab is ready when REA reports Ghidra available, the capture tools resolve, a
 
 ## Where To Go Next
 
-- [agentic-re-workflow.md](agentic-re-workflow.md) — how the agent uses this lab.
-- [../recipes/fingerprint-a-ue5-build.md](../recipes/fingerprint-a-ue5-build.md) — the first thing to do with a new build.
-- [../decisions/tooling.md](../decisions/tooling.md) — pinned tool versions.
+- [../../foundations/agentic-re-workflow.md](../../foundations/agentic-re-workflow.md) — how the agent uses this lab.
+- [../../domains/games/recipes/fingerprint-a-ue5-build.md](../../domains/games/recipes/fingerprint-a-ue5-build.md) — the first thing to do with a new build.
+- [../../decisions/tooling.md](../../decisions/tooling.md) — pinned tool versions.

@@ -13,7 +13,7 @@ This handbook is a control plane, not a tutorial. A change is correct only when 
 - **Fast path — [AGENTS.md](AGENTS.md).** Invariants, the Change Routing table, the verification bar. Terse and authoritative. Refine it; never weaken it.
 - **Slow path — [maintainer-reference.md](maintainer-reference.md).** Lifecycle model, evidence taxonomy, rationale, troubleshooting.
 
-Topic depth lives in `foundations/`, `techniques/`, and `operations/`; procedures in `recipes/`; gates in `checklists/`; fill-in artifacts in `templates/`; tool picks and contested stances in `decisions/`.
+Target-neutral topic depth lives in `foundations/`, `techniques/`, and `operations/`; procedures in `recipes/`; gates in `checklists/`; fill-in artifacts in `templates/`; tool picks and contested stances in `decisions/`. Domain- and platform-specific depth lives in `domains/<domain>/` and `platforms/<platform>/`, each with its own `README.md` index (currently `domains/games/` and `platforms/linux-proton/`). A new rule goes in the core when it holds for any target, and in a section when it is specific to that domain or platform. The core never links down into a section for a *rule*; it names the section and lets the section own the specifics.
 
 ### Use The House Shapes
 

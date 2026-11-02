@@ -17,25 +17,25 @@ Asset extraction is static, agent-safe once keys and mappings are in hand, and o
 | UAssetGUI / UAssetAPI | Per-asset inspection and editing; UAssetGUI release notes say "Added support for Unreal Engine 5.6 and 5.7" | `github.com/atenfyr/UAssetGUI` |
 | AESDumpster | "helps locate and extract AES keys from Unreal Engine games"; lists "5.0 to 5.6 (Supported)"; runs on Windows and Linux | `github.com/GHFear/AESDumpster` |
 
-Exact versions and checked dates live in [../decisions/tooling.md](../decisions/tooling.md). FModel and UAssetGUI are Windows desktop apps; run them in the tools prefix, never the game prefix ([../foundations/lab-setup-linux-proton.md](../foundations/lab-setup-linux-proton.md#two-prefixes-never-one)). CUE4Parse-based scripts, retoc, repak, and AESDumpster have CLI forms suitable for an agent pipeline.
+Exact versions and checked dates live in [../../decisions/tooling.md](../../decisions/tooling.md). FModel and UAssetGUI are Windows desktop apps; run them in the tools prefix, never the game prefix ([../../platforms/linux-proton/lab-setup-linux-proton.md](../../platforms/linux-proton/lab-setup-linux-proton.md#two-prefixes-never-one)). CUE4Parse-based scripts, retoc, repak, and AESDumpster have CLI forms suitable for an agent pipeline.
 
 ### Encryption Keys
 
-> **Warning:** Container encryption is a technical protection measure. Decrypting it is circumvention, and in the US it needs a legal basis such as the § 1201(f) interoperability purpose, or preservation of a discontinued title per [../operations/game-preservation.md](../operations/game-preservation.md) ([../foundations/scope-legal-and-ethics.md](../foundations/scope-legal-and-ethics.md#the-legal-frame-united-states-and-european-union)). Record that basis in `scope.md` before recovering a key.
+> **Warning:** Container encryption is a technical protection measure. Decrypting it is circumvention, and in the US it needs a legal basis such as the § 1201(f) interoperability purpose, or preservation of a discontinued title per [game-preservation.md](game-preservation.md) ([../../foundations/scope-legal-and-ethics.md](../../foundations/scope-legal-and-ethics.md#the-legal-frame-united-states-and-european-union)). Record that basis in `scope.md` before recovering a key.
 
 - Test first: open the containers in FModel with no key. If payloads read, there is no encryption.
 - An encrypted game embeds its key in the client so the client can read its own content. AESDumpster scans the executable statically for key candidates. Running it against your own installed copy reads a file you own and executes nothing from the game.
 - Validate each candidate by decrypting a known container's index. A key that opens the index is the key for that container; multi-key games need several.
-- Store keys under `keys/<build-id>.txt`, which git ignores and the agent's permissions deny reading ([../templates/re-workspace-agents.md](../templates/re-workspace-agents.md)). Pipelines read the file at run time. Keys are never posted, shared, or written into findings.
+- Store keys under `keys/<build-id>.txt`, which git ignores and the agent's permissions deny reading ([../../templates/re-workspace-agents.md](../../templates/re-workspace-agents.md)). Pipelines read the file at run time. Keys are never posted, shared, or written into findings.
 - Keys change between builds without notice. A decrypt failure on patch day is the first symptom.
 
 If the key cannot be recovered statically, stop. Extracting it from a running anti-cheat-protected process is out of scope.
 
 ### Mapping Files For Unversioned Properties
 
-Cooked UE5 packages usually need a `.usmap` ([../foundations/unreal-engine-internals.md](../foundations/unreal-engine-internals.md#unversioned-properties-and-mappings)). Without it, FModel lists assets but cannot show their properties.
+Cooked UE5 packages usually need a `.usmap` ([unreal-engine-internals.md](unreal-engine-internals.md#unversioned-properties-and-mappings)). Without it, FModel lists assets but cannot show their properties.
 
-- Generate it from the running game with UE4SS (`DumpUSMAP`) or Dumper-7 (its `MappingGenerator` writes `.usmap`). Both are runtime injection and go through [../checklists/runtime-session-gate.md](../checklists/runtime-session-gate.md); they are out of scope on anti-cheat builds connected to live services.
+- Generate it from the running game with UE4SS (`DumpUSMAP`) or Dumper-7 (its `MappingGenerator` writes `.usmap`). Both are runtime injection and go through [../../checklists/runtime-session-gate.md](../../checklists/runtime-session-gate.md); they are out of scope on anti-cheat builds connected to live services.
 - A mapping file is build-specific. Store it under `keys/<build-id>.usmap` with the key, and never reuse one across builds.
 - Without a mapping, raw structure work is still possible: asset names, imports and exports, and string tables often parse; property values do not.
 
@@ -53,7 +53,7 @@ Meshes, textures, and audio are rarely needed for protocol or system work. They 
 
 ### Scripted Exports
 
-Build the export as a script once, so patch day is a pipeline run ([../operations/patch-tracking.md](../operations/patch-tracking.md)):
+Build the export as a script once, so patch day is a pipeline run ([../../operations/patch-tracking.md](../../operations/patch-tracking.md)):
 
 - Use the CUE4Parse library from a small .NET console project, or FModel's batch export, to write selected asset paths to `exports/<build-id>/` as JSON.
 - Run the script through REA `capture_process_scenario` (`rea capture-process`) so the command, exit status, and output are Evidence.
@@ -76,6 +76,6 @@ Build the export as a script once, so patch day is a pipeline run ([../operation
 
 ## Where To Go Next
 
-- [../recipes/extract-assets-and-datatables.md](../recipes/extract-assets-and-datatables.md) — the step-by-step procedure.
+- [recipes/extract-assets-and-datatables.md](recipes/extract-assets-and-datatables.md) — the step-by-step procedure.
 - [reflection-dumping.md](reflection-dumping.md) — producing a mapping file where in scope.
 - [blueprint-analysis.md](blueprint-analysis.md) — reading logic in cooked Blueprints.

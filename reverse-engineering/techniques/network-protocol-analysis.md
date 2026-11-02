@@ -1,6 +1,6 @@
 # Network Protocol Analysis
 
-How to turn recorded traffic from your own UE5 MMO client into documented message specs: classify transports, intercept the HTTPS backend, identify serialization formats, approach Unreal NetDriver traffic, write Wireshark dissectors that REA can use, and build interoperability tooling without touching live servers.
+How to turn recorded traffic from your own copy of a target into documented message specs: classify transports, intercept the HTTPS backend, identify serialization formats, write Wireshark dissectors that REA can use, and build interoperability tooling without touching live servers. The worked example is a UE5 MMO client; the Unreal NetDriver specifics are the game case and link to the games section.
 
 ## Default Approach
 
@@ -8,7 +8,7 @@ Work from recordings. Capture one scripted session per question ([../recipes/cap
 
 ### Classify First
 
-Classification ([../foundations/mmo-client-server-model.md](../foundations/mmo-client-server-model.md#classify-before-you-dig)) decides the path per endpoint:
+Classification ([../domains/games/mmo-client-server-model.md](../domains/games/mmo-client-server-model.md#classify-before-you-dig)) decides the path per endpoint:
 
 | Endpoint looks like | Path |
 |---|---|
@@ -25,7 +25,7 @@ mitmproxy is the default interceptor. Two facts decide whether it works for a Pr
 
 1. **How traffic reaches mitmproxy.** mitmproxy's local capture mode "transparently captures traffic from applications running on the same device", selectable by process name or PID (`--mode local:<name>`). On Linux it requires "Linux 6.8 and above", is eBPF-based, needs sudo, captures outbound connections only, and matches process names on their first 16 characters (`docs.mitmproxy.org/stable/concepts/modes/#local-capture`). The reference CachyOS host runs a 7.x kernel.
 2. **Whether the client trusts mitmproxy's CA.** Wine's `crypt32` loads host CA bundles, starting with `/etc/ssl/certs/ca-certificates.crt` (`wine-mirror/wine`, `dlls/crypt32/unixlib.c`; Valve's Proton Wine fork has the same list). On Arch, `trust anchor <cert>` plus `update-ca-trust` writes that bundle (`wiki.archlinux.org/title/Transport_Layer_Security`). **But** Proton runs games inside the Steam Linux Runtime container, which mounts its own `/etc/ssl/certs` and imports host CA certificates only when `PRESSURE_VESSEL_IMPORT_CA_CERTS` is set; the default is off, and the source calls it "a developer-facing rather than end-user-facing flag" (`steam-runtime-tools`, `pressure-vessel/runtime.c`). Inference from the source, not yet tested by this handbook: set `PRESSURE_VESSEL_IMPORT_CA_CERTS=1` in the launch options for the session, and verify trust before relying on it.
-3. **Whether the client uses the OS store at all.** Unreal's HTTP stack can validate against a bundled `cacert.pem` (`Engine/Content/Certificates/ThirdParty/cacert.pem`, per Epic forum threads on the engine's certificate bundle), and games can pin certificates. If the client does not trust the host store, interception would require modifying the client's files or code. On a live-service client that is tampering; stop and fall back to boundary observation under the runtime gate ([dynamic-analysis-under-proton.md](dynamic-analysis-under-proton.md#observing-encrypted-traffic-at-the-boundary)).
+3. **Whether the client uses the OS store at all.** Unreal's HTTP stack can validate against a bundled `cacert.pem` (`Engine/Content/Certificates/ThirdParty/cacert.pem`, per Epic forum threads on the engine's certificate bundle), and games can pin certificates. If the client does not trust the host store, interception would require modifying the client's files or code. On a live-service client that is tampering; stop and fall back to boundary observation under the runtime gate ([dynamic-analysis.md](dynamic-analysis.md#observing-data-at-a-boundary)).
 
 Rules for interception sessions: never modify, replay, or inject requests; save flows under `captures/`; treat bearer tokens and cookies in flows as secrets.
 
@@ -47,14 +47,14 @@ Record the framing (length, opcode, flags) once in a protocol overview, then one
 Unreal's UDP protocol is hard to decode on the wire:
 
 - It is bit-packed, with packet headers, acks, and bunch headers whose layout depends on the engine version, and per-property encoding that depends on reflection data and replication state.
-- It may be encrypted by a packet handler component (`AESGCMHandlerComponent`), keyed through `OnReceivedNetworkEncryptionToken` ([../foundations/mmo-client-server-model.md](../foundations/mmo-client-server-model.md#unreals-built-in-replication)).
+- It may be encrypted by a packet handler component (`AESGCMHandlerComponent`), keyed through `OnReceivedNetworkEncryptionToken` ([../domains/games/mmo-client-server-model.md](../domains/games/mmo-client-server-model.md#unreals-built-in-replication)).
 - Iris, when enabled, changes the replication serialization.
 
 Practical approach:
 
 1. Do not start with a wire decoder. Start from the RPC index and the engine source's bunch and property serialization code for the matching tag.
 2. Use packet sizes and timing from `inspect_packet_capture` (`udp.length`, `frame.time_relative`) to correlate actions with traffic.
-3. Where runtime is in scope, observe RPC parameters at the UFunction or `ProcessEvent` boundary instead of decoding bits ([dynamic-analysis-under-proton.md](dynamic-analysis-under-proton.md)).
+3. Where runtime is in scope, observe RPC parameters at the UFunction or `ProcessEvent` boundary instead of decoding bits ([dynamic-analysis.md](dynamic-analysis.md)).
 4. Build a wire decoder only when interoperability requires it, as a port of the matching engine version's serialization code, validated against boundary observations.
 
 ### Dissectors REA Can Use
@@ -94,4 +94,4 @@ Purpose-built tools that consume the documented protocol — a data viewer readi
 
 - [../recipes/write-a-wireshark-dissector.md](../recipes/write-a-wireshark-dissector.md) — the dissector procedure.
 - [../templates/protocol-message-spec.md](../templates/protocol-message-spec.md) — the spec format.
-- [dynamic-analysis-under-proton.md](dynamic-analysis-under-proton.md) — boundary observation when the wire is opaque.
+- [dynamic-analysis.md](dynamic-analysis.md) — boundary observation when the wire is opaque.

@@ -52,4 +52,4 @@ Bytecode reading is static and agent-safe. Give the agent exported JSON or text 
 
 - [asset-extraction.md](asset-extraction.md) — getting the assets out.
 - [reflection-dumping.md](reflection-dumping.md) — the RPC index Blueprint calls are matched against.
-- [network-protocol-analysis.md](network-protocol-analysis.md) — what those RPCs look like on the wire.
+- [../../techniques/network-protocol-analysis.md](../../techniques/network-protocol-analysis.md) — what those RPCs look like on the wire.

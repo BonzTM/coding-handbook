@@ -1,6 +1,6 @@
 # Recipe: Fingerprint A UE5 Build
 
-Use this first on every new game and every new build: record exactly what was installed, which engine version built it, how its content is packaged, and which protections ship with it. Governed by [../techniques/recon-and-fingerprinting.md](../techniques/recon-and-fingerprinting.md).
+Use this first on every new game and every new build: record exactly what was installed, which engine version built it, how its content is packaged, and which protections ship with it. Governed by [../../../techniques/recon-and-fingerprinting.md](../../../techniques/recon-and-fingerprinting.md).
 
 ## Files To Touch
 
@@ -74,4 +74,4 @@ Use this first on every new game and every new build: record exactly what was in
 
 - `sha256sum -c builds/$BUILD/hashes.sha256` (run from `$GAME` with adjusted paths) passes.
 - `fingerprint.md` has no unfilled `<placeholder>`.
-- The engine version in `fingerprint.md` matches the REA string search in [open-the-client-in-rea.md](open-the-client-in-rea.md).
+- The engine version in `fingerprint.md` matches the REA string search in [../../../recipes/open-a-target-in-rea.md](../../../recipes/open-a-target-in-rea.md).

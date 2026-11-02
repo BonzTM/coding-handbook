@@ -1,8 +1,8 @@
 # Recipe: Dump The Reflection SDK
 
-Use this to produce an SDK and `.usmap` for a build where runtime dumping is in scope. Governed by [../techniques/reflection-dumping.md](../techniques/reflection-dumping.md).
+Use this to produce an SDK and `.usmap` for a build where runtime dumping is in scope. Governed by [../reflection-dumping.md](../reflection-dumping.md).
 
-> **Warning:** This injects code into the game. Walk [../checklists/runtime-session-gate.md](../checklists/runtime-session-gate.md) first. If the build ships anti-cheat and the session would connect to live services, stop here and use the static alternatives in [../techniques/reflection-dumping.md](../techniques/reflection-dumping.md#static-alternatives).
+> **Warning:** This injects code into the game. Walk [../../../checklists/runtime-session-gate.md](../../../checklists/runtime-session-gate.md) first. If the build ships anti-cheat and the session would connect to live services, stop here and use the static alternatives in [../reflection-dumping.md](../reflection-dumping.md#static-alternatives).
 
 ## Files To Touch
 
@@ -16,8 +16,8 @@ Use this to produce an SDK and `.usmap` for a build where runtime dumping is in 
 ## Steps
 
 1. Commit the brief with the gate checklist answers and this exact plan.
-2. Take a btrfs snapshot or copy of `compatdata/<appid>/` ([../foundations/lab-setup-linux-proton.md](../foundations/lab-setup-linux-proton.md#snapshot-before-anything-runs)).
-3. Choose the dumper per [../techniques/reflection-dumping.md](../techniques/reflection-dumping.md#dumper-choice). For UE 5.5+ with UE4SS, use the `experimental-latest` build.
+2. Take a btrfs snapshot or copy of `compatdata/<appid>/` ([../../../platforms/linux-proton/lab-setup-linux-proton.md](../../../platforms/linux-proton/lab-setup-linux-proton.md#snapshot-before-anything-runs)).
+3. Choose the dumper per [../reflection-dumping.md](../reflection-dumping.md#dumper-choice). For UE 5.5+ with UE4SS, use the `experimental-latest` build.
 4. UE4SS route (human-run):
    1. Copy the proxy `dwmapi.dll` and the `ue4ss/` folder into `<Project>/Binaries/Win64/`.
    2. In `UE4SS-settings.ini`, enable the C++ header dump and `.usmap` generation; disable mods you did not write.

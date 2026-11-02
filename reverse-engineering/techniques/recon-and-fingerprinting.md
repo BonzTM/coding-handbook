@@ -1,12 +1,14 @@
 # Recon And Fingerprinting
 
-How to identify exactly what a UE5 client build is, how its content is packaged, which protections and SDKs it ships, and which techniques that rules in or out — before opening a disassembler.
+How to identify exactly what a target build is, how it is packaged, which protections and dependencies it ships, and which techniques that rules in or out — before opening a disassembler.
 
 ## Default Approach
 
-Fingerprinting is cheap, static, and decides the rest of the engagement. It answers four questions, each recorded as a ledger finding: which engine version, which container format, which protections, which online backends. Run it first on every new game and again on every patch ([../recipes/fingerprint-a-ue5-build.md](../recipes/fingerprint-a-ue5-build.md)).
+Fingerprinting is cheap, static, and decides the rest of the engagement. For any target it answers the same questions, each recorded as a ledger finding: what format and architecture, what runtime/framework and version, what packer or protection, what dependencies and backends. Run it first on every new target and again on every build.
 
-### Install Layout
+The walkthrough below uses a UE5 game on Steam as the worked example; the game-specific procedure is [../domains/games/recipes/fingerprint-a-ue5-build.md](../domains/games/recipes/fingerprint-a-ue5-build.md). A non-game target applies the same four questions to its own format (PE/ELF/Mach-O, managed assembly, archive) using REA's identity tools ([static-binary-analysis.md](static-binary-analysis.md)); the engine-version and container specifics here are the UE case.
+
+### Install Layout (UE5 Game Example)
 
 A Steam UE5 game typically looks like this:
 
@@ -38,14 +40,14 @@ The `-Shipping.exe` is the analysis target. The launcher is not.
 
 Record presence, not internals:
 
-- **Anti-cheat** — `EasyAntiCheat/` with `start_protected_game.exe`-style launchers, `BattlEye/`, or another vendor directory. Presence sets the runtime scope per [../foundations/scope-legal-and-ethics.md](../foundations/scope-legal-and-ethics.md#anti-cheat-decides-runtime-scope).
+- **Anti-cheat** — `EasyAntiCheat/` with `start_protected_game.exe`-style launchers, `BattlEye/`, or another vendor directory. Presence sets the runtime scope per [../domains/games/anti-cheat-and-scope.md](../domains/games/anti-cheat-and-scope.md#anti-cheat-decides-runtime-scope).
 - **Packers/protectors** — non-standard PE section names and high-entropy code sections are visible in the PE header. A packed executable changes what static analysis can see: REA's guidance is that "decompiling an unpacking stub does not recover the unpacked program". Unpacking a protected executable is circumvention of a technical protection measure and is out of scope here.
 - **Debug data** — a shipped `.pdb` is rare and valuable; load it into Ghidra before other analysis. Ghidra's PDB help says to load the PDB "prior to other analysis".
 
 ### Online Backends
 
 - DLLs under `Binaries/Win64` and `Engine/Binaries/ThirdParty` name the SDKs: Epic Online Services, Steamworks, vendor telemetry, voice chat, crash reporting.
-- Cooked config (`DefaultEngine.ini`) names the NetDriver class, online subsystem, and often backend hostnames. Extract it with the asset tools ([asset-extraction.md](asset-extraction.md)).
+- Cooked config (`DefaultEngine.ini`) names the NetDriver class, online subsystem, and often backend hostnames. Extract it with the asset tools ([../domains/games/asset-extraction.md](../domains/games/asset-extraction.md)).
 - Strings in the executable give URL templates and REST paths. Search for `https://` and the backend hostnames, then page.
 
 ### Agent Role
@@ -68,6 +70,6 @@ Fingerprinting is fully static and agent-safe. An agent can run the shell steps 
 
 ## Where To Go Next
 
-- [../recipes/fingerprint-a-ue5-build.md](../recipes/fingerprint-a-ue5-build.md) — the procedure.
-- [asset-extraction.md](asset-extraction.md) — the next step for content.
-- [../recipes/open-the-client-in-rea.md](../recipes/open-the-client-in-rea.md) — the next step for code.
+- [../domains/games/recipes/fingerprint-a-ue5-build.md](../domains/games/recipes/fingerprint-a-ue5-build.md) — the procedure.
+- [../domains/games/asset-extraction.md](../domains/games/asset-extraction.md) — the next step for content.
+- [../recipes/open-a-target-in-rea.md](../recipes/open-a-target-in-rea.md) — the next step for code.

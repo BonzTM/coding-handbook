@@ -1,6 +1,6 @@
 # Runtime Session Gate Checklist
 
-Gate for any action that runs, attaches to, injects into, debugs, or intercepts the game client or its traffic. A human walks it before the session; any unchecked box means the session does not run. The rules live in [../foundations/scope-legal-and-ethics.md](../foundations/scope-legal-and-ethics.md) and [../techniques/dynamic-analysis-under-proton.md](../techniques/dynamic-analysis-under-proton.md).
+Gate for any action that runs, attaches to, injects into, debugs, or intercepts the target or its traffic. A human walks it before the session; any unchecked box means the session does not run. The rules live in [../foundations/scope-legal-and-ethics.md](../foundations/scope-legal-and-ethics.md) and [../techniques/dynamic-analysis.md](../techniques/dynamic-analysis.md), with platform mechanics in [../platforms/linux-proton/dynamic-analysis-under-proton.md](../platforms/linux-proton/dynamic-analysis-under-proton.md). The boxes below show a game/Proton session; adapt the target-specific ones (anti-cheat, game ToS, prefix) to your target.
 
 ## Authorization
 
@@ -24,7 +24,7 @@ Gate for any action that runs, attaches to, injects into, debugs, or intercepts 
 
 ## Environment
 
-- [ ] Does the session run in a dedicated lab prefix or snapshot, not the daily-play prefix ([../foundations/lab-setup-linux-proton.md](../foundations/lab-setup-linux-proton.md))?
+- [ ] Does the session run in a dedicated lab prefix or snapshot, not the daily-play prefix ([../platforms/linux-proton/lab-setup-linux-proton.md](../platforms/linux-proton/lab-setup-linux-proton.md))?
 - [ ] Is a btrfs snapshot (or prefix copy) taken so the prefix can be rolled back?
 - [ ] Are captures written under `captures/`, which git ignores?
 

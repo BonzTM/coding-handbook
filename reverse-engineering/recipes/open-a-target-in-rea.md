@@ -1,10 +1,10 @@
-# Recipe: Open The Client In REA
+# Recipe: Open A Target In REA
 
-Use this for the first native-analysis session on a new client build: open the UE5 executable with REA's Ghidra provider, keep a snapshot so later sessions skip auto-analysis, and land the first anchored findings. Governed by [../foundations/agentic-re-workflow.md](../foundations/agentic-re-workflow.md) and [../techniques/static-binary-analysis.md](../techniques/static-binary-analysis.md).
+Use this for the first native-analysis session on a new target build: open the binary with REA's Ghidra provider, keep a snapshot so later sessions skip auto-analysis, and land the first anchored findings. The anchors in step 5 are the UE5 game example; a non-game target uses its own unique strings and symbols. Governed by [../foundations/agentic-re-workflow.md](../foundations/agentic-re-workflow.md) and [../techniques/static-binary-analysis.md](../techniques/static-binary-analysis.md).
 
 ## Files To Touch
 
-- `builds/<build-id>/fingerprint.md` (read; must exist from [fingerprint-a-ue5-build.md](fingerprint-a-ue5-build.md))
+- `builds/<build-id>/fingerprint.md` (read; for a game, from [../domains/games/recipes/fingerprint-a-ue5-build.md](../domains/games/recipes/fingerprint-a-ue5-build.md))
 - `snapshots/<build-id>/` (new, git-ignored)
 - `builds/<build-id>/names.json` (new, committed): confirmed address names
 - `evidence/<build-id>-anchors-<yyyy-mm-dd>.json` (new)
@@ -12,9 +12,9 @@ Use this for the first native-analysis session on a new client build: open the U
 
 ## Steps
 
-1. Confirm the provider. Run `rea doctor --provider ghidra --json`, or call `binary_session` with `{}` from the agent. The `ghidra` entry under `analysis_provider_candidates` must report `available`. If it does not, fix the provider per [../foundations/lab-setup-linux-proton.md](../foundations/lab-setup-linux-proton.md#rea-and-ghidra-provider); do not re-run agent setup.
-2. Identify the real game module. UE5 games ship a small launcher `.exe` at the install root and the real binary under `<Project>/Binaries/Win64/<Project>-Win64-Shipping.exe`. Open the `-Shipping.exe`, not the launcher. Use the path recorded in the fingerprint.
-3. Run the first auto-analysis from a shell, not through the agent, so no MCP client tool-call timeout applies. Set the heap and deadline per [../foundations/lab-setup-linux-proton.md](../foundations/lab-setup-linux-proton.md#hardware-and-time-budget), then build the snapshot with the CLI. The CLI `--snapshot` flag is documented as "Load and update a local analysis snapshot" (`rea decompile --help`):
+1. Confirm the provider. Run `rea doctor --provider ghidra --json`, or call `binary_session` with `{}` from the agent. The `ghidra` entry under `analysis_provider_candidates` must report `available`. If it does not, fix the provider per [../platforms/linux-proton/lab-setup-linux-proton.md](../platforms/linux-proton/lab-setup-linux-proton.md#rea-and-ghidra-provider); do not re-run agent setup.
+2. Identify the real module to open, not a launcher or stub. For a UE5 game: the install root holds a small launcher `.exe`, and the real binary is `<Project>/Binaries/Win64/<Project>-Win64-Shipping.exe` — open the `-Shipping.exe`. Use the path recorded in the fingerprint.
+3. Run the first auto-analysis from a shell, not through the agent, so no MCP client tool-call timeout applies. Set the heap and deadline per [../platforms/linux-proton/lab-setup-linux-proton.md](../platforms/linux-proton/lab-setup-linux-proton.md#hardware-and-time-budget), then build the snapshot with the CLI. The CLI `--snapshot` flag is documented as "Load and update a local analysis snapshot" (`rea decompile --help`):
 
    ```bash
    export GHIDRA_INSTALL_DIR=~/.local/opt/<ghidra-release>
@@ -33,7 +33,7 @@ Use this for the first native-analysis session on a new client build: open the U
     "provider_id": "ghidra",
     "snapshot_path": "/abs/path/<workspace>/snapshots/<build-id>/client.snapshot"}
    ```
-5. Land anchors with literal searches, one at a time:
+5. Land anchors with literal searches, one at a time. Anchors are unique strings or symbols whose referencing code orients the rest; pick them from the fingerprint and the target's domain. For a UE5 game:
    - `search_strings` for the engine branch string recorded in the fingerprint (`++UE5+Release-5.` on stock branches; studio branches use their own, for example `++Project+<Name>-Release`).
    - `search_strings` for `/Script/Engine` and `/Script/CoreUObject`, the reflected package names; follow with `xrefs` to reach registration code.
    - `search_strings` for `NetDriver`, `IpNetDriver`, `GameNetDriver` to locate networking setup.

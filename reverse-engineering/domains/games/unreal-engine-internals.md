@@ -13,7 +13,7 @@ Epic publishes the engine source to licensees on GitHub. Access requires that yo
 The source is the best decompiler aid available:
 
 - It defines every structure layout the binary uses, version-exact.
-- A self-built shipping executable of an empty project, with its PDB, gives a symbol-rich twin of the engine code in the target. Port names from twin to target with Ghidra Version Tracking, which "enables the reverse engineer to port comments and labels into the new context" (Ghidra help, `VersionTrackingPlugin/Version_Tracking_Intro.html`). Procedure: [../techniques/static-binary-analysis.md](../techniques/static-binary-analysis.md#port-symbols-from-a-self-built-twin).
+- A self-built shipping executable of an empty project, with its PDB, gives a symbol-rich twin of the engine code in the target. Port names from twin to target with Ghidra Version Tracking, which "enables the reverse engineer to port comments and labels into the new context" (Ghidra help, `VersionTrackingPlugin/Version_Tracking_Intro.html`). Procedure: [../../techniques/static-binary-analysis.md](../../techniques/static-binary-analysis.md#port-symbols-from-a-self-built-twin).
 - Do not copy engine source into findings or publish it; the Unreal Engine EULA governs it.
 
 ### The Reflection System
@@ -41,7 +41,7 @@ Dumpers need exactly these anchors. UE4SS's compatibility guide lists `GUObjectA
 
 `UObject::ProcessEvent(UFunction* Function, void* Parms)` is "called by VM to execute a UFunction with a filled in UStruct of parameters" (Epic API reference, `UObject/Object.h`). Blueprint calls, many native-to-script calls, and RPC dispatch paths pass through it. It is a virtual function, so it sits at a fixed slot in every `UObject` vtable.
 
-For the analyst it is the single best observation point: a log of `ProcessEvent` calls is a log of reflected function calls with names. Observing it is runtime instrumentation and goes through [../checklists/runtime-session-gate.md](../checklists/runtime-session-gate.md).
+For the analyst it is the single best observation point: a log of `ProcessEvent` calls is a log of reflected function calls with names. Observing it is runtime instrumentation and goes through [../../checklists/runtime-session-gate.md](../../checklists/runtime-session-gate.md).
 
 ### Cooked Content And Containers
 
@@ -49,18 +49,18 @@ Shipped games contain cooked assets: platform-specific, editor-data-stripped pac
 
 - **Pak files (`.pak`)** — the classic container. Optional AES-256 encryption (Epic: `FAES::FAESKey`, "a 256 bit AES key") and RSA signing. Project Settings names the sections "Encryption" and "Signing"; signing exists "to prevent tampering of the data", and signatures ship as `.sig` files described by `FPakSignatureFile` (Epic API reference; `project-section-of-the-unreal-engine-project-settings`).
 - **IoStore (`.utoc` + `.ucas`)** — UE5's container format for the Zen loader. Epic: "Zen Loader is the new runtime loader for Unreal Engine 5" and "the .utoc file describes the container file, including chunk size and offset" (`dev.epicgames.com/documentation/en-us/unreal-engine/zen-loader-in-unreal-engine`). A small `.pak` often ships beside IoStore containers for loose and legacy content.
-- **Encryption key** — one key or several (per-chunk keys). Without the key, encrypted containers expose only their directory, or nothing. Recovering a key from your own copy of the client is covered in [../techniques/asset-extraction.md](../techniques/asset-extraction.md#encryption-keys).
+- **Encryption key** — one key or several (per-chunk keys). Without the key, encrypted containers expose only their directory, or nothing. Recovering a key from your own copy of the client is covered in [asset-extraction.md](asset-extraction.md#encryption-keys).
 - **Config** — `DefaultEngine.ini`, `DefaultGame.ini`, and `DefaultInput.ini` are cooked into containers and reveal NetDriver classes, online subsystems, server URLs, and feature flags.
 
 ### Unversioned Properties And Mappings
 
 Cooked UE5 packages usually serialize properties without names or type tags. Epic's package flag `PKG_UnversionedProperties` means the package "uses unversioned property serialization instead of versioned tagged property serialization" (Epic API reference, `EPackageFlags`). The reader must already know each class's property layout. Tools get it from a mapping file (`.usmap`) generated from the running game's reflection data. CUE4Parse fails without one: "Package has unversioned properties but mapping file is missing, can't serialize" (`CUE4Parse/UE4/Assets/AbstractUePackage.cs`). `.usmap` is a community format; UAssetAPI calls it "the unofficial .usmap format".
 
-The consequence: full asset parsing of a modern UE5 game usually needs one runtime reflection dump, or a mapping file someone else produced from the same build. See [../techniques/reflection-dumping.md](../techniques/reflection-dumping.md).
+The consequence: full asset parsing of a modern UE5 game usually needs one runtime reflection dump, or a mapping file someone else produced from the same build. See [reflection-dumping.md](reflection-dumping.md).
 
 ### Blueprints And Kismet Bytecode
 
-Blueprint graphs cook to Kismet bytecode stored in the asset's `ScriptBytecode`, executed by the engine's script VM. Game logic written in Blueprints is therefore in the containers, not the executable. UAssetAPI supports "reading and writing raw Kismet (blueprint) bytecode" (`github.com/atenfyr/UAssetAPI`). Analysis: [../techniques/blueprint-analysis.md](../techniques/blueprint-analysis.md).
+Blueprint graphs cook to Kismet bytecode stored in the asset's `ScriptBytecode`, executed by the engine's script VM. Game logic written in Blueprints is therefore in the containers, not the executable. UAssetAPI supports "reading and writing raw Kismet (blueprint) bytecode" (`github.com/atenfyr/UAssetAPI`). Analysis: [blueprint-analysis.md](blueprint-analysis.md).
 
 ### Shipping Builds Strip, But Not Everything
 
@@ -85,6 +85,6 @@ Blueprint graphs cook to Kismet bytecode stored in the asset's `ScriptBytecode`,
 
 ## Where To Go Next
 
-- [../techniques/asset-extraction.md](../techniques/asset-extraction.md) — containers, keys, and mappings in practice.
-- [../techniques/reflection-dumping.md](../techniques/reflection-dumping.md) — producing the SDK and `.usmap`.
-- [../techniques/static-binary-analysis.md](../techniques/static-binary-analysis.md) — using reflection and the engine source in Ghidra through REA.
+- [asset-extraction.md](asset-extraction.md) — containers, keys, and mappings in practice.
+- [reflection-dumping.md](reflection-dumping.md) — producing the SDK and `.usmap`.
+- [../../techniques/static-binary-analysis.md](../../techniques/static-binary-analysis.md) — using reflection and the engine source in Ghidra through REA.

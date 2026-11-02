@@ -1,6 +1,6 @@
 # Recipe: Extract Assets And DataTables
 
-Use this to export a build's config, DataTables, and string tables to diffable JSON. Governed by [../techniques/asset-extraction.md](../techniques/asset-extraction.md).
+Use this to export a build's config, DataTables, and string tables to diffable JSON. Governed by [../asset-extraction.md](../asset-extraction.md).
 
 > **Warning:** Decrypting containers is circumvention of a technical protection measure. Confirm `scope.md` records the legal basis before step 3.
 

@@ -16,6 +16,6 @@ This repository is a centralized engineering handbook for language- and stack-sp
 - `typescript/` - production-oriented guidance for new Node.js services, workers, CLIs, libraries, and React applications
 - `game-design/` - engine-agnostic design guidance for new game projects: design pillars, core loops, one-page system docs, and playtest-proven design decisions
 - `godot/` - production-oriented guidance for new Godot 4.x games and interactive tools, covering scene architecture, typed GDScript, data handling, and headless verification
-- `reverse-engineering/` - agent-driven reverse engineering of shipped game clients, focused on Unreal Engine 5 online games running under Proton on Linux, with REA as the evidence layer and hard scope boundaries against cheating and live-service tampering
+- `reverse-engineering/` - agent-driven reverse engineering of shipped software with REA as the evidence layer; a target-neutral core plus domain and platform sections (shipped game clients, and Windows targets on Linux/Proton, as the worked example), with hard scope boundaries against protection-measure circumvention and live-service tampering
 
 All detailed guidance lives inside the language-specific handbook directories. The repo root stays intentionally thin so it can route cleanly as more handbooks are added later.

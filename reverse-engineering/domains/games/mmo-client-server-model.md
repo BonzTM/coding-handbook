@@ -25,17 +25,17 @@ When a game uses Unreal's own networking, the moving parts are documented in Epi
 - **Bunches and packets** — channels send bunches, which the engine packs into UDP packets with its own reliability and ordering. The format is bit-packed, not byte-aligned. Networking Insights names each bunch "after the channel it belongs to" (`dev.epicgames.com/documentation/unreal-engine/networking-insights-in-unreal-engine`).
 - **Property replication** — `UPROPERTY(Replicated)` fields sent server→client when they change.
 - **RPCs** — the networking overview lists three types: "Server (only runs on the server)", "Client (only runs on the Actor's owning client)", and NetMulticast, which runs on every connected machine. Server RPCs are the client→server request surface.
-- **Packet encryption** — optional. `FAESGCMHandlerComponent` is documented as "AES256 GCM block encryption component", and `FNetDelegates::OnReceivedNetworkEncryptionToken` is "fired when an encryption key is required by the network layer" (Epic API reference, `AESGCMHandlerComponent.h`, `Engine/NetworkDelegates.h`). An encrypted NetDriver stream is opaque on the wire; analysis moves into the client ([../techniques/network-protocol-analysis.md](../techniques/network-protocol-analysis.md#unreal-netdriver-traffic)).
-- **Iris** — Unreal's newer replication system. Epic's Iris introduction page labels it "Experimental" and enables it per project with `bUseIris = true;`, `SetupIrisSupport(Target);`, and `net.Iris.UseIrisReplication=1` (`dev.epicgames.com/documentation/en-us/unreal-engine/introduction-to-iris-in-unreal-engine`). Check whether the target ships Iris before assuming the classic replication path ([../techniques/static-binary-analysis.md](../techniques/static-binary-analysis.md#find-the-networking-layer)).
+- **Packet encryption** — optional. `FAESGCMHandlerComponent` is documented as "AES256 GCM block encryption component", and `FNetDelegates::OnReceivedNetworkEncryptionToken` is "fired when an encryption key is required by the network layer" (Epic API reference, `AESGCMHandlerComponent.h`, `Engine/NetworkDelegates.h`). An encrypted NetDriver stream is opaque on the wire; analysis moves into the client ([../../techniques/network-protocol-analysis.md](../../techniques/network-protocol-analysis.md#unreal-netdriver-traffic)).
+- **Iris** — Unreal's newer replication system. Epic's Iris introduction page labels it "Experimental" and enables it per project with `bUseIris = true;`, `SetupIrisSupport(Target);`, and `net.Iris.UseIrisReplication=1` (`dev.epicgames.com/documentation/en-us/unreal-engine/introduction-to-iris-in-unreal-engine`). Check whether the target ships Iris before assuming the classic replication path ([../../techniques/static-binary-analysis.md](../../techniques/static-binary-analysis.md#find-the-networking-layer)).
 
-Reflection makes this surface enumerable. Every RPC is a `UFunction` with network flags, so a reflection dump lists the client→server request surface by name ([../techniques/reflection-dumping.md](../techniques/reflection-dumping.md)).
+Reflection makes this surface enumerable. Every RPC is a `UFunction` with network flags, so a reflection dump lists the client→server request surface by name ([reflection-dumping.md](reflection-dumping.md)).
 
 ### Custom MMO Backends
 
 Many MMOs keep Unreal for rendering, input, and local simulation and run the persistent world on a separate backend. Typical signals:
 
 - Long-lived TCP or WebSocket connections to hosts that are not the UDP game-server host.
-- An embedded serialization library: Protocol Buffers, FlatBuffers, MessagePack, Cap'n Proto, or a hand-written binary format. Protocol Buffers leaves serialized descriptors and `.proto` file names in the binary that tools can recover ([../techniques/network-protocol-analysis.md](../techniques/network-protocol-analysis.md#identify-the-serialization-format)).
+- An embedded serialization library: Protocol Buffers, FlatBuffers, MessagePack, Cap'n Proto, or a hand-written binary format. Protocol Buffers leaves serialized descriptors and `.proto` file names in the binary that tools can recover ([../../techniques/network-protocol-analysis.md](../../techniques/network-protocol-analysis.md#identify-the-serialization-format)).
 - HTTPS REST or gRPC for login, character select, store, social, and matchmaking.
 - Third-party online SDKs (Epic Online Services, Steamworks, PlayFab, AWS GameLift, custom). Their DLLs and strings fingerprint them.
 
@@ -61,7 +61,7 @@ Run this classification as the first network question and record each answer as 
 | Request surface | Yes: Server RPC names, opcodes, REST routes the client calls | Server-only admin routes |
 | Game data | Client-shipped DataTables, strings, curves | Server-only tables, drop rates not shipped |
 | Validation | Client-side checks only | Server validation, except as seen in recorded rejections |
-| Anti-abuse | Out of scope ([scope-legal-and-ethics.md](scope-legal-and-ethics.md)) | — |
+| Anti-abuse | Out of scope ([../../foundations/scope-legal-and-ethics.md](../../foundations/scope-legal-and-ethics.md)) | — |
 
 ## Common Mistakes And Forbidden Patterns
 
@@ -79,5 +79,5 @@ Run this classification as the first network question and record each answer as 
 ## Where To Go Next
 
 - [unreal-engine-internals.md](unreal-engine-internals.md) — the reflection and packaging internals the classification relies on.
-- [../techniques/network-protocol-analysis.md](../techniques/network-protocol-analysis.md) — decoding the transports once classified.
-- [../recipes/capture-and-classify-traffic.md](../recipes/capture-and-classify-traffic.md) — the capture-and-classify procedure.
+- [../../techniques/network-protocol-analysis.md](../../techniques/network-protocol-analysis.md) — decoding the transports once classified.
+- [../../recipes/capture-and-classify-traffic.md](../../recipes/capture-and-classify-traffic.md) — the capture-and-classify procedure.

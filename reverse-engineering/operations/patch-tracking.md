@@ -1,10 +1,10 @@
 # Patch Tracking
 
-How to keep findings true across client patches: one fingerprint per build, a scripted re-extraction pipeline, REA-backed function and capture comparison, and a ledger that marks findings stale instead of silently trusting them.
+How to keep findings true across target updates: one fingerprint per build, a scripted re-run of the extraction pipeline, REA-backed function and capture comparison, and a ledger that marks findings stale instead of silently trusting them. The examples are drawn from a patching online game, the hardest case; the discipline applies to any target that ships new builds.
 
 ## Default Approach
 
-Online games patch often, and every patch can move offsets, rename reflected types, re-key containers, and change message layouts. A finding is pinned to the build it was observed on. On a new build, every finding is "unverified on this build" until a re-check says otherwise.
+Shipped software updates, and every update can move offsets, rename symbols, re-key containers, and change message layouts. A finding is pinned to the build it was observed on. On a new build, every finding is "unverified on this build" until a re-check says otherwise. (For a game, that means new engine offsets, renamed reflected types, a refreshed AES key or `.usmap`, and changed RPCs — see [../domains/games/reflection-dumping.md](../domains/games/reflection-dumping.md) and [../domains/games/asset-extraction.md](../domains/games/asset-extraction.md).)
 
 ### One Build, One Identity
 
@@ -16,11 +16,11 @@ Online games patch often, and every patch can move offsets, rename reflected typ
 
 Each step from first contact becomes a script under `scripts/` so the next patch is a pipeline run:
 
-1. Fingerprint — [../recipes/fingerprint-a-ue5-build.md](../recipes/fingerprint-a-ue5-build.md).
-2. Key and mapping refresh — new AES key check, new `.usmap` — [../techniques/asset-extraction.md](../techniques/asset-extraction.md).
-3. Asset export of tracked DataTables and string tables to JSON — [../recipes/extract-assets-and-datatables.md](../recipes/extract-assets-and-datatables.md).
-4. Reflection dump — [../recipes/dump-the-reflection-sdk.md](../recipes/dump-the-reflection-sdk.md), only where the runtime gate allows it.
-5. REA snapshot of the new executable — [../recipes/open-the-client-in-rea.md](../recipes/open-the-client-in-rea.md).
+1. Fingerprint — [../domains/games/recipes/fingerprint-a-ue5-build.md](../domains/games/recipes/fingerprint-a-ue5-build.md).
+2. Key and mapping refresh — new AES key check, new `.usmap` — [../domains/games/asset-extraction.md](../domains/games/asset-extraction.md).
+3. Asset export of tracked DataTables and string tables to JSON — [../domains/games/recipes/extract-assets-and-datatables.md](../domains/games/recipes/extract-assets-and-datatables.md).
+4. Reflection dump — [../domains/games/recipes/dump-the-reflection-sdk.md](../domains/games/recipes/dump-the-reflection-sdk.md), only where the runtime gate allows it.
+5. REA snapshot of the new executable — [../recipes/open-a-target-in-rea.md](../recipes/open-a-target-in-rea.md).
 
 Run the asset-tool steps through REA `capture_process_scenario` (`rea capture-process`) so the command line, exit code and output are kept as Evidence alongside the results.
 

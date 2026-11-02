@@ -16,7 +16,7 @@ Use REA instead of raw tool output for three reasons:
 - **Summary first, page later.** A UE5 client executable is hundreds of megabytes with hundreds of thousands of functions. REA returns a summary and a retained `parent_evidence_id`; the agent pages with `inspect_analysis_view` instead of flooding its context. The REA skill states this rule directly: "Start with the default result and use its inline Evidence and graph context."
 - **One surface for static and recorded runtime data.** Ghidra-backed decompilation, PE resources, pcap summaries, TShark field extraction, mitmproxy/HAR captures, Frida and GDB sessions all return the same Evidence shape.
 
-The deep native provider for Windows PE targets on Linux is Ghidra; REA uses an existing install and does not install one (`github.com/morluto/rea#readme`, "Ghidra and IDA use your existing installations"). Lab setup, provider configuration and the environment variables live in [lab-setup-linux-proton.md](lab-setup-linux-proton.md#rea-and-ghidra-provider).
+The deep native provider for Windows PE targets on Linux is Ghidra; REA uses an existing install and does not install one (`github.com/morluto/rea#readme`, "Ghidra and IDA use your existing installations"). Lab setup, provider configuration and the environment variables live in [../platforms/linux-proton/lab-setup-linux-proton.md](../platforms/linux-proton/lab-setup-linux-proton.md#rea-and-ghidra-provider).
 
 ### Route Each Question To Its REA Tool
 
@@ -30,7 +30,7 @@ The deep native provider for Windows PE targets on Linux is Ghidra; REA uses an 
 | Summarize a saved packet capture | `inspect_pcap_capture` with `detail: "summary"` | Needs caller-supplied `tshark` and `capinfos`; REA "never captures traffic". |
 | Pull specific fields from a capture, decode-as a port | `inspect_packet_fields`, `inspect_packet_capture` | Needs `REA_TSHARK_COMMAND`. |
 | Map the HTTP/REST backend | `inspect_web_network_capture` on a HAR or native mitmproxy flow file, then `inspect_analysis_view` with `kind: "api-surface"` | Groups request lines by method and path template; no replay. |
-| Hook a function at runtime | `instrument_with_frida`, `start_frida_session` | Runtime action: human gate. See [../techniques/dynamic-analysis-under-proton.md](../techniques/dynamic-analysis-under-proton.md). |
+| Hook a function at runtime | `instrument_with_frida`, `start_frida_session` | Runtime action: human gate. See [../techniques/dynamic-analysis.md](../techniques/dynamic-analysis.md). |
 | Run an extraction tool and keep its output as evidence | `capture_process_scenario` / `rea capture-process` | Use for `retoc`, `repak`, CUE4Parse CLIs — not for launching the game. |
 | Compare two builds | `compare_functions`, `find_changed_behavior`, `compare_artifacts` | Static differences are candidates, not causal proof. |
 | Track an open question | `record_unknown`, `update_unknown`, `list_unknowns` | Each unknown names the authority or environment still needed. |
@@ -123,7 +123,7 @@ Enforce the gate in the harness, not only in prose:
 
 ## Where To Go Next
 
-- [lab-setup-linux-proton.md](lab-setup-linux-proton.md) — install and configure REA, Ghidra, TShark and the Proton tooling.
+- [../platforms/linux-proton/lab-setup-linux-proton.md](../platforms/linux-proton/lab-setup-linux-proton.md) — install and configure REA, Ghidra, TShark and the Proton tooling.
 - [scope-legal-and-ethics.md](scope-legal-and-ethics.md) — what the agent may and may not do.
-- [../recipes/open-the-client-in-rea.md](../recipes/open-the-client-in-rea.md) — the first native session, step by step.
+- [../recipes/open-a-target-in-rea.md](../recipes/open-a-target-in-rea.md) — the first native session, step by step.
 - [../templates/re-workspace-agents.md](../templates/re-workspace-agents.md) — the engagement contract the agent reads first.

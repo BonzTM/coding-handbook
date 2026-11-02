@@ -21,7 +21,7 @@ Pick one default per job, say when to reach for something else, and re-check ver
 | Packet capture and decoding | `dumpcap` + TShark, Lua dissectors | interactive work: Wireshark GUI |
 | Protobuf descriptor recovery | protodump | pbtk, for its broader extraction and replay tooling |
 | Debugger under Proton (gated) | GDB, via `winedbg --gdb` when Wine module info is needed | — |
-| Function hooking under Proton (gated) | none by default; Frida is unsupported under Wine | validated lab setup per [../techniques/dynamic-analysis-under-proton.md](../techniques/dynamic-analysis-under-proton.md#frida-under-wine-unsupported) |
+| Function hooking under Proton (gated) | none by default; Frida is unsupported under Wine | validated lab setup per [../platforms/linux-proton/dynamic-analysis-under-proton.md](../platforms/linux-proton/dynamic-analysis-under-proton.md#frida-under-wine-unsupported) |
 
 ### Verified Versions
 
@@ -63,4 +63,4 @@ Changes to the defaults above, and any change to the boundaries in [../foundatio
 ## Where To Go Next
 
 - [README.md](README.md) — how decisions are recorded.
-- [../foundations/lab-setup-linux-proton.md](../foundations/lab-setup-linux-proton.md) — installing the defaults.
+- [../platforms/linux-proton/lab-setup-linux-proton.md](../platforms/linux-proton/lab-setup-linux-proton.md) — installing the defaults.

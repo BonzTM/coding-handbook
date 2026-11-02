@@ -4,6 +4,8 @@ Purpose: hold the slower-path engagement lifecycle, evidence taxonomy, rationale
 Audience: maintainers of this handbook and agents running a long engagement.
 Read [AGENTS.md](AGENTS.md) first. Use this file when you need the why.
 
+The core (foundations/techniques/operations) is target-neutral; domain and platform depth live in [domains/games/](domains/games/README.md) and [platforms/linux-proton/](platforms/linux-proton/README.md). The lifecycle and troubleshooting below depict the worked game/Proton engagement; a non-game target drops the asset phase and substitutes its own format and platform.
+
 ## Engagement Lifecycle
 
 ```text
@@ -51,19 +53,19 @@ A `high` confidence finding needs two independent evidence types; static plus re
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `rea doctor`: "GHIDRA_INSTALL_DIR is not set" | env var missing in the shell or the MCP server's env | set it in both places ([foundations/lab-setup-linux-proton.md](foundations/lab-setup-linux-proton.md#rea-and-ghidra-provider)) |
+| `rea doctor`: "GHIDRA_INSTALL_DIR is not set" | env var missing in the shell or the MCP server's env | set it in both places ([platforms/linux-proton/lab-setup-linux-proton.md](platforms/linux-proton/lab-setup-linux-proton.md#rea-and-ghidra-provider)) |
 | Ghidra startup deadline exceeded | UE5-sized binary | raise `REA_GHIDRA_STARTUP_TIMEOUT_MS`, `GHIDRA_HEADLESS_MAXMEM`; build the snapshot from a shell |
 | Snapshot will not reopen | different analysis profile (for example changed `REA_GHIDRA_DISABLED_ANALYZERS`) or different binary hash | reopen with the original profile, or rebuild the snapshot |
 | Snapshot save fails at close | metadata edits in the session | export Evidence, close without snapshot; names live in `names.json` |
 | `inspect_packet_capture` unavailable | `REA_TSHARK_COMMAND` unset | set it to the absolute `tshark` path in REA's environment |
 | Custom protocol fields missing in REA | Lua plugin not in the REA process's `$HOME` plugin folder | `tshark -G folders`; symlink the dissector; check with `inspect_packet_fields` |
-| FModel lists assets but shows no properties | unversioned properties without `.usmap` | gated dump or static alternatives ([techniques/reflection-dumping.md](techniques/reflection-dumping.md)) |
+| FModel lists assets but shows no properties | unversioned properties without `.usmap` | gated dump or static alternatives ([domains/games/reflection-dumping.md](domains/games/reflection-dumping.md)) |
 | Containers list but do not extract | encryption; wrong or changed key | AESDumpster on the current build; re-test key |
 | mitmproxy sees no game traffic | wrong mode, kernel below 6.8 for local mode, or process name beyond 16 characters | check mode and process match ([techniques/network-protocol-analysis.md](techniques/network-protocol-analysis.md#tls-and-the-http-backend)) |
 | TLS errors with mitmproxy | game in Steam Runtime container not importing host CAs, bundled CA file, or pinning | test `PRESSURE_VESSEL_IMPORT_CA_CERTS=1`; if the client uses its own bundle or pins, stop on live-service clients |
-| Frida "Unable to locate the libc" | host Frida attaching to a Wine process | unsupported; see [techniques/dynamic-analysis-under-proton.md](techniques/dynamic-analysis-under-proton.md#frida-under-wine-unsupported) |
+| Frida "Unable to locate the libc" | host Frida attaching to a Wine process | unsupported; see [platforms/linux-proton/dynamic-analysis-under-proton.md](platforms/linux-proton/dynamic-analysis-under-proton.md#frida-under-wine-unsupported) |
 | UE4SS does not load under Proton | DLL override not applied, or Proton regression | `WINEDLLOVERRIDES="dwmapi.dll=n,b" %command%`; try another Proton version in the lab prefix |
-| No `++UE5+Release` string | studio engine branch | narrow version from other evidence ([recipes/fingerprint-a-ue5-build.md](recipes/fingerprint-a-ue5-build.md)) |
+| No `++UE5+Release` string | studio engine branch | narrow version from other evidence ([domains/games/recipes/fingerprint-a-ue5-build.md](domains/games/recipes/fingerprint-a-ue5-build.md)) |
 
 ## Where To Go Next
 

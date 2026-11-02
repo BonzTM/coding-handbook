@@ -1,6 +1,6 @@
 # Recipe: Capture And Classify Traffic
 
-Use this to record one scripted play session of your own client and classify its transports before any protocol decoding. Governed by [../foundations/mmo-client-server-model.md](../foundations/mmo-client-server-model.md) and [../techniques/network-protocol-analysis.md](../techniques/network-protocol-analysis.md).
+Use this to record one scripted play session of your own client and classify its transports before any protocol decoding. Governed by [../domains/games/mmo-client-server-model.md](../domains/games/mmo-client-server-model.md) and [../techniques/network-protocol-analysis.md](../techniques/network-protocol-analysis.md).
 
 > **Warning:** Capturing your own traffic is passive. It is still a runtime session for the client. Walk [../checklists/runtime-session-gate.md](../checklists/runtime-session-gate.md) first. The human starts the game and logs in; the agent only reads the saved capture.
 
@@ -36,7 +36,7 @@ Use this to record one scripted play session of your own client and classify its
    Page DNS questions, TLS SNI values, endpoint and protocol distributions with `inspect_analysis_view` and the returned `parent_evidence_id`.
 8. Classify each endpoint: purpose (login, meta, world, voice, telemetry, CDN), transport (TCP/UDP/QUIC), TLS or not, step(s) in the timeline where it is active.
 9. For UDP endpoints active only in world, pull packet sizes and timing with `inspect_packet_capture` (needs `REA_TSHARK_COMMAND`), fields `frame.time_relative`, `udp.srcport`, `udp.dstport`, `udp.length`, filtered by the endpoint.
-10. Write the five classification rows from [../foundations/mmo-client-server-model.md](../foundations/mmo-client-server-model.md#classify-before-you-dig) into `findings.md`, each citing the Evidence IDs.
+10. Write the five classification rows from [../domains/games/mmo-client-server-model.md](../domains/games/mmo-client-server-model.md#classify-before-you-dig) into `findings.md`, each citing the Evidence IDs.
 11. Export the bundle to `evidence/<build-id>-traffic-<date>.json`.
 
 ## Invariants To Preserve
