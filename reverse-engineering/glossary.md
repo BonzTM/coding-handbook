@@ -25,6 +25,9 @@ UE5's container format for the Zen loader: `.utoc` table-of-contents files plus 
 ## Kismet bytecode
 The compiled form of Blueprint graphs, stored in cooked assets and run by the engine's script VM. Owned by [techniques/blueprint-analysis.md](techniques/blueprint-analysis.md).
 
+## Act-versus-tool gap
+The §1201 structure where a triennial exemption can permit a person's own act of circumvention for a covered purpose, but no exemption reaches the anti-trafficking prohibitions (17 U.S.C. § 1201(a)(2), (b)), so building, sharing, or publishing the tool or method stays unlawful. Owned by [operations/game-preservation.md](operations/game-preservation.md).
+
 ## Local-gameplay limit
 The clause in the 2024 US preservation rulemaking (37 CFR 201.40) that scopes the game-preservation exemption to play "not through an online service or facility", which excludes restoring an MMO's online multiplayer. Owned by [operations/game-preservation.md](operations/game-preservation.md).
 
