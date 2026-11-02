@@ -4,9 +4,9 @@ This repository is a centralized engineering handbook for language- and stack-sp
 
 ## Start Here
 
-- Humans: start with the README of the handbook matching your language or domain — `golang/README.md`, `csharp/README.md`, `python/README.md`, `typescript/README.md`, `game-design/README.md`, or `godot/README.md`
+- Humans: start with the README of the handbook matching your language or domain — `golang/README.md`, `csharp/README.md`, `python/README.md`, `typescript/README.md`, `game-design/README.md`, `godot/README.md`, or `reverse-engineering/README.md`
 - Agents: start with `AGENTS.md`
-- Maintainers routing changes inside a handbook: use the Change Routing table in that handbook's `AGENTS.md` (`golang/AGENTS.md`, `csharp/AGENTS.md`, `python/AGENTS.md`, `typescript/AGENTS.md`, `game-design/AGENTS.md`, `godot/AGENTS.md`)
+- Maintainers routing changes inside a handbook: use the Change Routing table in that handbook's `AGENTS.md` (`golang/AGENTS.md`, `csharp/AGENTS.md`, `python/AGENTS.md`, `typescript/AGENTS.md`, `game-design/AGENTS.md`, `godot/AGENTS.md`, `reverse-engineering/AGENTS.md`)
 
 ## Current Handbooks
 
@@ -16,5 +16,6 @@ This repository is a centralized engineering handbook for language- and stack-sp
 - `typescript/` - production-oriented guidance for new Node.js services, workers, CLIs, libraries, and React applications
 - `game-design/` - engine-agnostic design guidance for new game projects: design pillars, core loops, one-page system docs, and playtest-proven design decisions
 - `godot/` - production-oriented guidance for new Godot 4.x games and interactive tools, covering scene architecture, typed GDScript, data handling, and headless verification
+- `reverse-engineering/` - agent-driven reverse engineering of shipped software with REA as the evidence layer; a target-neutral core plus domain and platform sections (shipped game clients, and Windows targets on Linux/Proton, as the worked example), with hard scope boundaries against protection-measure circumvention and live-service tampering
 
 All detailed guidance lives inside the language-specific handbook directories. The repo root stays intentionally thin so it can route cleanly as more handbooks are added later.
