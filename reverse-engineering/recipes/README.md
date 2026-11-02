@@ -17,6 +17,10 @@ Step-by-step procedures for the common work in a UE5 client reverse-engineering 
 - [capture-and-classify-traffic.md](capture-and-classify-traffic.md) — record one scripted session of your own client and classify its endpoints. Governed by [../techniques/network-protocol-analysis.md](../techniques/network-protocol-analysis.md).
 - [write-a-wireshark-dissector.md](write-a-wireshark-dissector.md) — Lua dissector that Wireshark, TShark, and REA all use. Governed by [../techniques/network-protocol-analysis.md](../techniques/network-protocol-analysis.md#dissectors-rea-can-use).
 
+## Preservation
+
+- [reconstruct-a-preservation-server.md](reconstruct-a-preservation-server.md) — stand up an independent server from the documented protocol so a client you own connects after the official servers are gone. Governed by [../operations/game-preservation.md](../operations/game-preservation.md).
+
 ## Maintenance
 
 - [diff-a-patch.md](diff-a-patch.md) — patch-day re-fingerprint, re-export, re-locate, and ledger update. Governed by [../operations/patch-tracking.md](../operations/patch-tracking.md).

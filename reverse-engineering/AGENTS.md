@@ -16,7 +16,7 @@ Read this file first: it carries the invariants, the change-routing table, and t
 - Host setup: [foundations/lab-setup-linux-proton.md](foundations/lab-setup-linux-proton.md).
 - Engine internals: [foundations/unreal-engine-internals.md](foundations/unreal-engine-internals.md). Client/server model and classification: [foundations/mmo-client-server-model.md](foundations/mmo-client-server-model.md).
 - Techniques: [techniques/recon-and-fingerprinting.md](techniques/recon-and-fingerprinting.md), [techniques/asset-extraction.md](techniques/asset-extraction.md), [techniques/reflection-dumping.md](techniques/reflection-dumping.md), [techniques/static-binary-analysis.md](techniques/static-binary-analysis.md), [techniques/blueprint-analysis.md](techniques/blueprint-analysis.md), [techniques/dynamic-analysis-under-proton.md](techniques/dynamic-analysis-under-proton.md), [techniques/network-protocol-analysis.md](techniques/network-protocol-analysis.md).
-- Patch lifecycle: [operations/patch-tracking.md](operations/patch-tracking.md).
+- Patch lifecycle: [operations/patch-tracking.md](operations/patch-tracking.md). Preservation of discontinued games: [operations/game-preservation.md](operations/game-preservation.md).
 - Tool picks and every version pin: [decisions/tooling.md](decisions/tooling.md) only.
 
 ## Fast Path
@@ -56,6 +56,7 @@ Read this file first: it carries the invariants, the change-routing table, and t
 | Traffic capture and endpoint classification | [recipes/capture-and-classify-traffic.md](recipes/capture-and-classify-traffic.md), [foundations/mmo-client-server-model.md](foundations/mmo-client-server-model.md) | `findings.md` classification rows | five classification answers with Evidence |
 | Message spec or dissector | [techniques/network-protocol-analysis.md](techniques/network-protocol-analysis.md), [recipes/write-a-wireshark-dissector.md](recipes/write-a-wireshark-dissector.md), [templates/protocol-message-spec.md](templates/protocol-message-spec.md) | `protocol/messages/`, `protocol/dissectors/` | capture + static Evidence per spec; no malformed packets |
 | Patch day | [recipes/diff-a-patch.md](recipes/diff-a-patch.md), [operations/patch-tracking.md](operations/patch-tracking.md) | `builds/<new-id>/`, ledger verification notes | no finding cites only old-build evidence without a stale mark |
+| Preserving a discontinued game (servers gone ≥6 months) | [operations/game-preservation.md](operations/game-preservation.md), [recipes/reconstruct-a-preservation-server.md](recipes/reconstruct-a-preservation-server.md) | `scope.md` preservation basis, `server/`, `protocol/`, `findings.md` | discontinuation and basis recorded; server contains no publisher code; no active-protection circumvention |
 | Tool pick or version change | [decisions/tooling.md](decisions/tooling.md), [decisions/README.md](decisions/README.md) | docs that name the tool | version row has source and date; no pins elsewhere |
 | New handbook doc, recipe, checklist, or template | [CONTRIBUTING.md](CONTRIBUTING.md) | this table, [README.md](README.md), owning index, [glossary.md](glossary.md) | links resolve; doc reachable and routed |
 

@@ -24,6 +24,7 @@ This handbook is the default contract for agent-driven reverse engineering of sh
 | Document the network protocol | [foundations/mmo-client-server-model.md](foundations/mmo-client-server-model.md) → [recipes/capture-and-classify-traffic.md](recipes/capture-and-classify-traffic.md) → [techniques/network-protocol-analysis.md](techniques/network-protocol-analysis.md) → [recipes/write-a-wireshark-dissector.md](recipes/write-a-wireshark-dissector.md) |
 | Observe the client at runtime (gated) | [checklists/runtime-session-gate.md](checklists/runtime-session-gate.md) → [techniques/dynamic-analysis-under-proton.md](techniques/dynamic-analysis-under-proton.md) → [recipes/dump-the-reflection-sdk.md](recipes/dump-the-reflection-sdk.md) |
 | Keep findings current across patches | [operations/patch-tracking.md](operations/patch-tracking.md) → [recipes/diff-a-patch.md](recipes/diff-a-patch.md) |
+| Preserve a game whose servers are gone | [foundations/scope-legal-and-ethics.md](foundations/scope-legal-and-ethics.md) → [operations/game-preservation.md](operations/game-preservation.md) → [recipes/reconstruct-a-preservation-server.md](recipes/reconstruct-a-preservation-server.md) |
 
 ## Non-Negotiables
 
@@ -56,7 +57,7 @@ Versions and supported engine ranges: [decisions/tooling.md](decisions/tooling.m
 - [maintainer-reference.md](maintainer-reference.md) — engagement lifecycle, evidence taxonomy, rationale, troubleshooting
 - `foundations/` — [scope, legal, and ethics](foundations/scope-legal-and-ethics.md), [agentic RE workflow](foundations/agentic-re-workflow.md), [lab setup on Linux with Proton](foundations/lab-setup-linux-proton.md), [Unreal Engine internals](foundations/unreal-engine-internals.md), [MMO client/server model](foundations/mmo-client-server-model.md)
 - `techniques/` — [recon and fingerprinting](techniques/recon-and-fingerprinting.md), [asset extraction](techniques/asset-extraction.md), [reflection dumping](techniques/reflection-dumping.md), [static binary analysis](techniques/static-binary-analysis.md), [Blueprint analysis](techniques/blueprint-analysis.md), [dynamic analysis under Proton](techniques/dynamic-analysis-under-proton.md), [network protocol analysis](techniques/network-protocol-analysis.md)
-- `operations/` — [patch tracking](operations/patch-tracking.md)
+- `operations/` — [patch tracking](operations/patch-tracking.md), [game preservation](operations/game-preservation.md)
 - `recipes/` ([index](recipes/README.md)), `checklists/` ([index](checklists/README.md)), `templates/` ([index](templates/README.md)), `decisions/` ([index](decisions/README.md))
 - [glossary.md](glossary.md) — term lookup; [CONTRIBUTING.md](CONTRIBUTING.md) — changing this handbook
 

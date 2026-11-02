@@ -21,7 +21,7 @@ Exact versions and checked dates live in [../decisions/tooling.md](../decisions/
 
 ### Encryption Keys
 
-> **Warning:** Container encryption is a technical protection measure. Decrypting it is circumvention, and in the US it needs a legal basis such as the § 1201(f) interoperability purpose ([../foundations/scope-legal-and-ethics.md](../foundations/scope-legal-and-ethics.md#the-legal-frame-united-states-and-european-union)). Record that basis in `scope.md` before recovering a key.
+> **Warning:** Container encryption is a technical protection measure. Decrypting it is circumvention, and in the US it needs a legal basis such as the § 1201(f) interoperability purpose, or preservation of a discontinued title per [../operations/game-preservation.md](../operations/game-preservation.md) ([../foundations/scope-legal-and-ethics.md](../foundations/scope-legal-and-ethics.md#the-legal-frame-united-states-and-european-union)). Record that basis in `scope.md` before recovering a key.
 
 - Test first: open the containers in FModel with no key. If payloads read, there is no encryption.
 - An encrypted game embeds its key in the client so the client can read its own content. AESDumpster scans the executable statically for key candidates. Running it against your own installed copy reads a file you own and executes nothing from the game.

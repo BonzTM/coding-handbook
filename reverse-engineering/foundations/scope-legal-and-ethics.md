@@ -47,7 +47,7 @@ Know the anchors; get advice from a lawyer for anything beyond personal research
 - **37 CFR 201.40(b)(19)** (2024 rulemaking) exempts circumvention to preserve games whose owner "has ceased to provide access to an external computer server", where support was discontinued for at least six months. It covers "local gameplay", defined as not through "an online service or facility" (`ecfr.gov/current/title-37/section-201.40`). It does not cover a live MMO.
 - **Case law** — *Sega v. Accolade*, 977 F.2d 1510 (9th Cir. 1992), held disassembly for a legitimate reason with no other means of access to be "a fair use of the copyrighted work, as a matter of law"; *Sony v. Connectix*, 203 F.3d 596 (9th Cir. 2000), held intermediate copies made "during the course of its reverse engineering" to be protected fair use. Both are US Ninth Circuit decisions about copyright, not about breach of contract.
 
-The practical reading: static analysis for interoperability is on the strongest footing; preservation exemptions start when servers are gone; nothing above authorizes interfering with a live online service.
+The practical reading: static analysis for interoperability is on the strongest footing; preservation exemptions start when servers are gone; nothing above authorizes interfering with a live online service. When the servers are confirmed gone, the preservation path — server re-implementation and archival extraction — is detailed in [../operations/game-preservation.md](../operations/game-preservation.md), including the local-gameplay limit that keeps online-service restoration a grayer, cooperation-dependent question.
 
 ### Data You Will Touch
 

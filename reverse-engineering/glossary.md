@@ -25,6 +25,9 @@ UE5's container format for the Zen loader: `.utoc` table-of-contents files plus 
 ## Kismet bytecode
 The compiled form of Blueprint graphs, stored in cooked assets and run by the engine's script VM. Owned by [techniques/blueprint-analysis.md](techniques/blueprint-analysis.md).
 
+## Local-gameplay limit
+The clause in the 2024 US preservation rulemaking (37 CFR 201.40) that scopes the game-preservation exemption to play "not through an online service or facility", which excludes restoring an MMO's online multiplayer. Owned by [operations/game-preservation.md](operations/game-preservation.md).
+
 ## Mapping file (`.usmap`)
 A community-format file describing every reflected type's property layout for one build, needed to parse cooked packages that use unversioned properties. Build-specific and never redistributed. Owned by [techniques/asset-extraction.md](techniques/asset-extraction.md).
 
@@ -39,6 +42,9 @@ Headers and indexes generated from a running game's reflection data: classes, st
 
 ## RPC index
 `protocol/rpc-index.md`: every UFunction with a network flag (Server, Client, NetMulticast) from the reflection dump; the client→server request surface in text. Owned by [techniques/reflection-dumping.md](techniques/reflection-dumping.md).
+
+## Preservation server
+An independent server, written from the documented protocol, that a client you own connects to after the official servers are discontinued. It contains no publisher server code; reconstructed server rules are inferences from client evidence. Owned by [operations/game-preservation.md](operations/game-preservation.md).
 
 ## Runtime gate
 The [checklists/runtime-session-gate.md](checklists/runtime-session-gate.md) checklist, committed before any action that runs, attaches to, injects into, debugs, or intercepts the client. Owned by [foundations/scope-legal-and-ethics.md](foundations/scope-legal-and-ethics.md).
